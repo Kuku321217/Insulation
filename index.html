@@ -824,22 +824,7 @@
                 setInputs(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
             };
 
-            const exportToJSON = () => {
-                const data = {
-                    inputs,
-                    results,
-                    developer: "Developed by: AY",
-                    timestamp: new Date().toISOString()
-                };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `Bottom_Insulation_Calc_${Date.now()}.json`;
-                a.click();
-            };
-
-            const exportToPDF = async () => {
+const exportToPDF = async () => {
                 if (!results) return;
                 setExporting(true);
                 
@@ -1300,106 +1285,193 @@
                 setExporting(true);
                 
                 try {
-                    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
-                            AlignmentType, WidthType, BorderStyle, HeadingLevel } = docx;
+                    // Create comprehensive text-based Word document
+                    const content = `BOTTOM INSULATION CALCULATION REPORT
+LNG Tank Design Verification System
+Date: ${new Date().toLocaleString()}
+
+═══════════════════════════════════════════════════════════════
+DEVELOPED BY: AY
+═══════════════════════════════════════════════════════════════
+
+CALCULATION SUMMARY
+══════════════════════════════════════════════════════════════
+Overall Status: ${results.summary.overallStatus}
+
+Verification Results:
+• Ring Concrete Verification: ${results.summary.ringConcreteStatus}
+• Bottom Insulation - Center Part: ${results.summary.centerPartStatus}
+• Bottom Insulation - Ring Part: ${results.summary.ringPartStatus}
+
+Key Design Values:
+• Max Operating Stress (Center): ${results.summary.maxOperatingStressCenter.toFixed(6)} MPa
+• Max Operating Stress (Ring): ${results.summary.maxOperatingStressRing.toFixed(6)} MPa
+
+
+INPUT PARAMETERS
+══════════════════════════════════════════════════════════════
+
+1. Material Properties
+──────────────────────────────────────────────────────────────
+Cellular Glass Nominal Strength (Center): ${inputs.cellular_center_nominal} MPa
+Cellular Glass Minimum Strength (Center): ${inputs.cellular_center_minimum} MPa
+Cellular Glass Nominal Strength (Ring): ${inputs.cellular_ring_nominal} MPa
+Cellular Glass Minimum Strength (Ring): ${inputs.cellular_ring_minimum} MPa
+
+2. Liquid Properties
+──────────────────────────────────────────────────────────────
+LNG Density: ${inputs.lng_density} kg/m³
+Seawater Density: ${inputs.seawater_density} kg/m³
+Gravity Acceleration: ${inputs.gravity} m/s²
+
+3. Liquid Levels & Pressure
+──────────────────────────────────────────────────────────────
+Max Design Liquid Level (Operating): ${inputs.max_liquid_level} m
+High Liquid Level (OBE & SSE): ${inputs.high_liquid_level} m
+Hydrostatic Test Level: ${inputs.test_level} m
+Gas Pressure: ${inputs.gas_pressure} MPa
+
+4. Seismic Accelerations
+──────────────────────────────────────────────────────────────
+Impulsive LNG - Horizontal (αi) - OBE: ${inputs.alpha_i_obe} G
+Impulsive LNG - Horizontal (αi) - SSE: ${inputs.alpha_i_sse} G
+Impulsive LNG - Vertical (αvf) - OBE: ${inputs.alpha_vf_obe} G
+Impulsive LNG - Vertical (αvf) - SSE: ${inputs.alpha_vf_sse} G
+Convective LNG - Horizontal (αc) - OBE: ${inputs.alpha_c_obe} G
+Convective LNG - Horizontal (αc) - SSE: ${inputs.alpha_c_sse} G
+Outer Tank - Vertical (αvr) - OBE: ${inputs.alpha_vr_obe} G
+Outer Tank - Vertical (αvr) - SSE: ${inputs.alpha_vr_sse} G
+
+5. Tank Geometry & Inner Shell Loading
+──────────────────────────────────────────────────────────────
+Tank Radius: ${inputs.tank_radius} m
+Self-weight of Inner Shell & Stiffener: ${inputs.shell_weight} kg
+Perlite Insulation Height: ${inputs.perlite_height} m
+Perlite Thickness: ${inputs.perlite_thickness} m
+Perlite Density: ${inputs.perlite_density} kg/m³
+Friction Coefficient (μ): ${inputs.friction_coef}
+Pressure Ratio (k): ${inputs.pressure_ratio}
+Overturning Moment - OBE: ${inputs.moment_obe.toExponential(2)} N·mm
+Overturning Moment - SSE: ${inputs.moment_sse.toExponential(2)} N·mm
+
+6. Dead Load Components
+──────────────────────────────────────────────────────────────
+Inner Tank Annular Plate: ${inputs.inner_annular_thickness} m, ${inputs.inner_annular_density} kg/m³
+Ring Concrete: ${inputs.ring_concrete_thickness} m, ${inputs.ring_concrete_density} kg/m³
+TCP Annular Plate: ${inputs.tcp_annular_thickness} m, ${inputs.tcp_annular_density} kg/m³
+Leveling Ring: ${inputs.leveling_ring_thickness} m, ${inputs.leveling_ring_density} kg/m³
+Inner Tank Bottom Plate: ${inputs.inner_bottom_thickness} m, ${inputs.inner_bottom_density} kg/m³
+Leveling Concrete (Upper): ${inputs.leveling_upper_thickness} m, ${inputs.leveling_upper_density} kg/m³
+TCP Bottom Plate: ${inputs.tcp_bottom_thickness} m, ${inputs.tcp_bottom_density} kg/m³
+Leveling Concrete (Lower): ${inputs.leveling_lower_thickness} m, ${inputs.leveling_lower_density} kg/m³
+
+7. Ring Concrete Verification Properties
+──────────────────────────────────────────────────────────────
+Shell Thickness: ${inputs.shell_thickness} mm
+Weld Length: ${inputs.weld_length} mm
+Annular Plate Thickness: ${inputs.annular_thickness} mm
+Concrete Compressive Strength: ${inputs.concrete_strength} MPa
+Safety Factor (Normal): ${inputs.safety_factor_normal}
+Safety Factor (SSE): ${inputs.safety_factor_sse}
+Coefficient αcc: ${inputs.coef_acc}
+
+
+DETAILED CALCULATION RESULTS
+══════════════════════════════════════════════════════════════
+
+1. Static Liquid Pressure
+──────────────────────────────────────────────────────────────
+P1-OPE (Operating Condition): ${results.staticPressure.p1_ope.toFixed(6)} MPa
+P1-TEST (Hydrostatic Test): ${results.staticPressure.p1_test.toFixed(6)} MPa
+P1-SEIS (Seismic Condition): ${results.staticPressure.p1_seis.toFixed(6)} MPa
+
+2. Dynamic Liquid Pressure
+──────────────────────────────────────────────────────────────
+Pv-OBE (Vertical Seismic Component): ${results.dynamicPressure.pv_obe.toFixed(6)} MPa
+P2-OBE (Total Dynamic Pressure - OBE): ${results.dynamicPressure.p2_obe.toFixed(6)} MPa
+Pv-SSE (Vertical Seismic Component): ${results.dynamicPressure.pv_sse.toFixed(6)} MPa
+P2-SSE (Total Dynamic Pressure - SSE): ${results.dynamicPressure.p2_sse.toFixed(6)} MPa
+
+3. Dead Load Compressive Force
+──────────────────────────────────────────────────────────────
+P3-OPE-R (Ring - Operating): ${results.deadLoad.p3_ope_r.toFixed(6)} MPa
+P3-OPE-C (Center - Operating): ${results.deadLoad.p3_ope_c.toFixed(6)} MPa
+P3-OBE-R (Ring - OBE): ${results.deadLoad.p3_obe_r.toFixed(6)} MPa
+P3-OBE-C (Center - OBE): ${results.deadLoad.p3_obe_c.toFixed(6)} MPa
+P3-SSE-R (Ring - SSE): ${results.deadLoad.p3_sse_r.toFixed(6)} MPa
+P3-SSE-C (Center - SSE): ${results.deadLoad.p3_sse_c.toFixed(6)} MPa
+
+4. Line Load Along Inner Shell
+──────────────────────────────────────────────────────────────
+WL-OPE (Operating Condition): ${results.lineLoad.wl_ope.toFixed(3)} N/mm
+WL-TEST (Hydrostatic Test): ${results.lineLoad.wl_test.toFixed(3)} N/mm
+WL-OBE (OBE Seismic): ${results.lineLoad.wl_obe.toFixed(3)} N/mm
+WL-SSE (SSE Seismic): ${results.lineLoad.wl_sse.toFixed(3)} N/mm
+
+
+VERIFICATION RESULTS
+══════════════════════════════════════════════════════════════
+
+5. Ring Concrete Strength Verification
+──────────────────────────────────────────────────────────────
+Operating:
+  Design Force: ${results.ringConcrete.operating.design_force.toFixed(3)} N/mm
+  Resistance: ${results.ringConcrete.operating.resistance.toFixed(3)} N/mm
+  Status: ${results.ringConcrete.operating.status}
+
+Hydrostatic Testing:
+  Design Force: ${results.ringConcrete.testing.design_force.toFixed(3)} N/mm
+  Resistance: ${results.ringConcrete.testing.resistance.toFixed(3)} N/mm
+  Status: ${results.ringConcrete.testing.status}
+
+OBE Seismic:
+  Design Force: ${results.ringConcrete.obe.design_force.toFixed(3)} N/mm
+  Resistance: ${results.ringConcrete.obe.resistance.toFixed(3)} N/mm
+  Status: ${results.ringConcrete.obe.status}
+
+SSE Seismic:
+  Design Force: ${results.ringConcrete.sse.design_force.toFixed(3)} N/mm
+  Resistance: ${results.ringConcrete.sse.resistance.toFixed(3)} N/mm
+  Status: ${results.ringConcrete.sse.status}
+
+6. Bottom Insulation Verification - Center Part (Grade 800)
+──────────────────────────────────────────────────────────────
+${Object.entries(results.insulation.centerPart).map(([key, val]) => 
+`${key.charAt(0).toUpperCase() + key.slice(1)}:
+  Calculated Stress: ${val.calc_stress.toFixed(6)} MPa
+  Allowable Stress: ${val.allow_stress.toFixed(6)} MPa
+  Safety Factor: ${val.safety_factor}
+  Status: ${val.status}
+`).join('\n')}
+
+7. Bottom Insulation Verification - Ring Part (Grade 1600)
+──────────────────────────────────────────────────────────────
+${Object.entries(results.insulation.ringPart).map(([key, val]) => 
+`${key.charAt(0).toUpperCase() + key.slice(1)}:
+  Calculated Stress: ${val.calc_stress.toFixed(6)} MPa
+  Allowable Stress: ${val.allow_stress.toFixed(6)} MPa
+  Safety Factor: ${val.safety_factor}
+  Status: ${val.status}
+`).join('\n')}
+
+
+═══════════════════════════════════════════════════════════════
+© Developed by: AY - All Rights Reserved
+═══════════════════════════════════════════════════════════════
+`;
                     
-                    const border = { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" };
-                    const borders = { top: border, bottom: border, left: border, right: border };
-                    
-                    const createTableRow = (cells, isHeader = false) => {
-                        return new TableRow({
-                            children: cells.map((cell, index) => {
-                                const widths = cells.length === 2 ? [6000, 3360] : [5000, 2360, 2000];
-                                return new TableCell({
-                                    borders,
-                                    width: { size: widths[index], type: WidthType.DXA },
-                                    children: [new Paragraph({
-                                        children: [new TextRun({ text: String(cell), bold: isHeader })]
-                                    })]
-                                });
-                            })
-                        });
-                    };
-                    
-                    const doc = new Document({
-                        sections: [{
-                            properties: {
-                                page: {
-                                    margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
-                                }
-                            },
-                            children: [
-                                // Title
-                                new Paragraph({
-                                    heading: HeadingLevel.HEADING_1,
-                                    alignment: AlignmentType.CENTER,
-                                    children: [new TextRun({ text: "BOTTOM INSULATION CALCULATION", bold: true, size: 32 })],
-                                    spacing: { after: 200 }
-                                }),
-                                new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    children: [new TextRun({ text: "LNG Tank Design Verification Report", size: 24 })],
-                                    spacing: { after: 100 }
-                                }),
-                                new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    children: [new TextRun({ text: `Date: ${new Date().toLocaleString()}`, size: 20 })],
-                                    spacing: { after: 100 }
-                                }),
-                                new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    children: [new TextRun({ text: "Developed by: AY", bold: true, color: "0099FF", size: 22 })],
-                                    spacing: { after: 400 }
-                                }),
-                                
-                                // Summary Section
-                                new Paragraph({
-                                    heading: HeadingLevel.HEADING_2,
-                                    children: [new TextRun({ text: "CALCULATION SUMMARY", bold: true })],
-                                    spacing: { before: 200, after: 200 }
-                                }),
-                                new Paragraph({
-                                    children: [new TextRun({ 
-                                        text: results.summary.overallStatus, 
-                                        bold: true,
-                                        size: 28,
-                                        color: results.summary.overallStatus === 'ALL VERIFICATIONS PASSED' ? "00AA00" : "AA0000"
-                                    })],
-                                    spacing: { after: 200 }
-                                }),
-                                
-                                // Summary Table
-                                new Table({
-                                    width: { size: 9360, type: WidthType.DXA },
-                                    rows: [
-                                        createTableRow(['Verification Item', 'Status'], true),
-                                        createTableRow(['Ring Concrete Verification', results.summary.ringConcreteStatus]),
-                                        createTableRow(['Bottom Insulation - Center Part', results.summary.centerPartStatus]),
-                                        createTableRow(['Bottom Insulation - Ring Part', results.summary.ringPartStatus])
-                                    ]
-                                }),
-                                
-                                new Paragraph({ text: "", spacing: { after: 400 } }),
-                                
-                                // Footer watermark
-                                new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    children: [new TextRun({ text: "© Developed by: AY - All Rights Reserved", color: "0099FF", size: 18 })],
-                                    spacing: { before: 400 }
-                                })
-                            ]
-                        }]
-                    });
-                    
-                    const blob = await Packer.toBlob(doc);
+                    const blob = new Blob([content], { type: 'application/msword' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Bottom_Insulation_Report_AY_${Date.now()}.docx`;
+                    a.download = `Bottom_Insulation_Report_AY_${Date.now()}.doc`;
+                    document.body.appendChild(a);
                     a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
                 } catch (error) {
                     console.error('Word export error:', error);
-                    alert('Error exporting to Word. Please try again.');
+                    alert('Error exporting to Word: ' + error.message);
                 } finally {
                     setExporting(false);
                 }
@@ -1651,9 +1723,6 @@
                             </div>
 
                             <div className="export-buttons">
-                                <button className="export-btn" onClick={exportToJSON}>
-                                    💾 Export to JSON
-                                </button>
                                 <button className="export-btn" onClick={exportToPDF} disabled={exporting}>
                                     📄 {exporting ? 'Exporting...' : 'Export to PDF'}
                                 </button>
