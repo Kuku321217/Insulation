@@ -9,7 +9,13 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
+    <script>
+        // Fallback loader for docx if the primary CDN fails to define the global
+        if (typeof docx === 'undefined') {
+            document.write('<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"><\/script>');
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -1231,6 +1237,10 @@
                 setExporting(true);
                 
                 try {
+                    if (typeof docx === 'undefined' || !docx.Document) {
+                        alert('The Word library (docx) could not be loaded. This usually means no internet connection or the CDN is blocked. Please check your connection and reload the page.');
+                        return;
+                    }
                     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
                             AlignmentType, WidthType, BorderStyle, HeadingLevel, Footer } = docx;
                     
@@ -1240,7 +1250,13 @@
                     const createTableRow = (cells, isHeader = false) => {
                         return new TableRow({
                             children: cells.map((cell, index) => {
-                                const widths = cells.length === 2 ? [6000, 3360] : [5000, 2360, 2000];
+                                let widths;
+                                if (cells.length === 2) widths = [6000, 3360];
+                                else if (cells.length === 3) widths = [5000, 2360, 2000];
+                                else {
+                                    const w = Math.floor(9360 / cells.length);
+                                    widths = cells.map(() => w);
+                                }
                                 return new TableCell({
                                     borders,
                                     width: { size: widths[index], type: WidthType.DXA },
@@ -1250,6 +1266,25 @@
                                 });
                             })
                         });
+                    };
+
+                    // Helper: returns [heading paragraph, table] for a titled section
+                    const sectionTable = (title, header, rows) => {
+                        return [
+                            new Paragraph({
+                                heading: HeadingLevel.HEADING_3,
+                                children: [new TextRun({ text: title })],
+                                spacing: { before: 200, after: 100 }
+                            }),
+                            new Table({
+                                width: { size: 9360, type: WidthType.DXA },
+                                rows: [
+                                    createTableRow(header, true),
+                                    ...rows.map(r => createTableRow(r))
+                                ]
+                            }),
+                            new Paragraph({ text: "", spacing: { after: 200 } })
+                        ];
                     };
                     
                     const doc = new Document({
@@ -1352,33 +1387,156 @@
                                 }),
                                 
                                 new Paragraph({ text: "", spacing: { after: 200 } }),
-                                
-                                // ... Continue with all input parameters ...
-                                // (This would be very long, so showing pattern)
-                                
+
+                                // Full Material Properties
+                                ...sectionTable("1. Material Properties (full)", ['Parameter', 'Value', 'Unit'], [
+                                    ['Cellular Glass Nominal Strength (Center)', inputs.cellular_center_nominal, 'MPa'],
+                                    ['Cellular Glass Minimum Strength (Center)', inputs.cellular_center_minimum, 'MPa'],
+                                    ['Cellular Glass Nominal Strength (Ring)', inputs.cellular_ring_nominal, 'MPa'],
+                                    ['Cellular Glass Minimum Strength (Ring)', inputs.cellular_ring_minimum, 'MPa']
+                                ]),
+
+                                // Liquid Properties
+                                ...sectionTable("2. Liquid Properties", ['Parameter', 'Value', 'Unit'], [
+                                    ['LNG Density', inputs.lng_density, 'kg/m\u00b3'],
+                                    ['Seawater Density', inputs.seawater_density, 'kg/m\u00b3'],
+                                    ['Gravity Acceleration', inputs.gravity, 'm/s\u00b2']
+                                ]),
+
+                                // Liquid Levels & Pressure
+                                ...sectionTable("3. Liquid Levels & Pressure", ['Parameter', 'Value', 'Unit'], [
+                                    ['Max Design Liquid Level (Operating)', inputs.max_liquid_level, 'm'],
+                                    ['High Liquid Level (OBE & SSE)', inputs.high_liquid_level, 'm'],
+                                    ['Hydrostatic Test Level', inputs.test_level, 'm'],
+                                    ['Gas Pressure', inputs.gas_pressure, 'MPa']
+                                ]),
+
+                                // Seismic Accelerations
+                                ...sectionTable("4. Seismic Accelerations", ['Parameter', 'Value', 'Unit'], [
+                                    ['Impulsive LNG - Horizontal (\u03b1i) - OBE', inputs.alpha_i_obe, 'G'],
+                                    ['Impulsive LNG - Horizontal (\u03b1i) - SSE', inputs.alpha_i_sse, 'G'],
+                                    ['Impulsive LNG - Vertical (\u03b1vf) - OBE', inputs.alpha_vf_obe, 'G'],
+                                    ['Impulsive LNG - Vertical (\u03b1vf) - SSE', inputs.alpha_vf_sse, 'G'],
+                                    ['Convective LNG - Horizontal (\u03b1c) - OBE', inputs.alpha_c_obe, 'G'],
+                                    ['Convective LNG - Horizontal (\u03b1c) - SSE', inputs.alpha_c_sse, 'G'],
+                                    ['Outer Tank - Vertical (\u03b1vr) - OBE', inputs.alpha_vr_obe, 'G'],
+                                    ['Outer Tank - Vertical (\u03b1vr) - SSE', inputs.alpha_vr_sse, 'G']
+                                ]),
+
+                                // Tank Geometry
+                                ...sectionTable("5. Tank Geometry & Inner Shell Loading", ['Parameter', 'Value', 'Unit'], [
+                                    ['Tank Radius', inputs.tank_radius, 'm'],
+                                    ['Self-weight of Inner Shell & Stiffener', inputs.shell_weight, 'kg'],
+                                    ['Perlite Insulation Height', inputs.perlite_height, 'm'],
+                                    ['Perlite Thickness', inputs.perlite_thickness, 'm'],
+                                    ['Perlite Density', inputs.perlite_density, 'kg/m\u00b3'],
+                                    ['Friction Coefficient (\u03bc)', inputs.friction_coef, '-'],
+                                    ['Pressure Ratio (k)', inputs.pressure_ratio, '-'],
+                                    ['Overturning Moment - OBE', inputs.moment_obe.toExponential(2), 'N\u00b7mm'],
+                                    ['Overturning Moment - SSE', inputs.moment_sse.toExponential(2), 'N\u00b7mm']
+                                ]),
+
+                                // Dead Load Components
+                                ...sectionTable("6. Dead Load Components", ['Component', 'Thickness (m)', 'Density (kg/m\u00b3)'], [
+                                    ['Inner Tank Annular Plate', inputs.inner_annular_thickness, inputs.inner_annular_density],
+                                    ['Ring Concrete', inputs.ring_concrete_thickness, inputs.ring_concrete_density],
+                                    ['TCP Annular Plate', inputs.tcp_annular_thickness, inputs.tcp_annular_density],
+                                    ['Leveling Ring', inputs.leveling_ring_thickness, inputs.leveling_ring_density],
+                                    ['Inner Tank Bottom Plate', inputs.inner_bottom_thickness, inputs.inner_bottom_density],
+                                    ['Leveling Concrete (Upper)', inputs.leveling_upper_thickness, inputs.leveling_upper_density],
+                                    ['TCP Bottom Plate', inputs.tcp_bottom_thickness, inputs.tcp_bottom_density],
+                                    ['Leveling Concrete (Lower)', inputs.leveling_lower_thickness, inputs.leveling_lower_density]
+                                ]),
+
+                                // Ring Concrete Verification Properties
+                                ...sectionTable("7. Ring Concrete Verification Properties", ['Parameter', 'Value', 'Unit'], [
+                                    ['Shell Thickness', inputs.shell_thickness, 'mm'],
+                                    ['Weld Length', inputs.weld_length, 'mm'],
+                                    ['Annular Plate Thickness', inputs.annular_thickness, 'mm'],
+                                    ['Concrete Compressive Strength', inputs.concrete_strength, 'MPa'],
+                                    ['Safety Factor (Normal)', inputs.safety_factor_normal, '-'],
+                                    ['Safety Factor (SSE)', inputs.safety_factor_sse, '-'],
+                                    ['Coefficient \u03b1cc', inputs.coef_acc, '-']
+                                ]),
+
                                 // RESULTS SECTION
                                 new Paragraph({
                                     heading: HeadingLevel.HEADING_2,
                                     children: [new TextRun({ text: "DETAILED CALCULATION RESULTS", bold: true })],
                                     spacing: { before: 400, after: 200 }
                                 }),
-                                
-                                // Static Pressure Results
+
+                                // Static Liquid Pressure
+                                ...sectionTable("1. Static Liquid Pressure", ['Parameter', 'Value', 'Unit'], [
+                                    ['P1-OPE (Operating Condition)', results.staticPressure.p1_ope.toFixed(6), 'MPa'],
+                                    ['P1-TEST (Hydrostatic Test)', results.staticPressure.p1_test.toFixed(6), 'MPa'],
+                                    ['P1-SEIS (Seismic Condition)', results.staticPressure.p1_seis.toFixed(6), 'MPa']
+                                ]),
+
+                                // Dynamic Liquid Pressure
+                                ...sectionTable("2. Dynamic Liquid Pressure", ['Parameter', 'Value', 'Unit'], [
+                                    ['Pv-OBE (Vertical Seismic Component)', results.dynamicPressure.pv_obe.toFixed(6), 'MPa'],
+                                    ['P2-OBE (Total Dynamic Pressure - OBE)', results.dynamicPressure.p2_obe.toFixed(6), 'MPa'],
+                                    ['Pv-SSE (Vertical Seismic Component)', results.dynamicPressure.pv_sse.toFixed(6), 'MPa'],
+                                    ['P2-SSE (Total Dynamic Pressure - SSE)', results.dynamicPressure.p2_sse.toFixed(6), 'MPa']
+                                ]),
+
+                                // Dead Load Compressive Force
+                                ...sectionTable("3. Dead Load Compressive Force", ['Parameter', 'Value', 'Unit'], [
+                                    ['P3-OPE-R (Ring - Operating)', results.deadLoad.p3_ope_r.toFixed(6), 'MPa'],
+                                    ['P3-OPE-C (Center - Operating)', results.deadLoad.p3_ope_c.toFixed(6), 'MPa'],
+                                    ['P3-OBE-R (Ring - OBE)', results.deadLoad.p3_obe_r.toFixed(6), 'MPa'],
+                                    ['P3-OBE-C (Center - OBE)', results.deadLoad.p3_obe_c.toFixed(6), 'MPa'],
+                                    ['P3-SSE-R (Ring - SSE)', results.deadLoad.p3_sse_r.toFixed(6), 'MPa'],
+                                    ['P3-SSE-C (Center - SSE)', results.deadLoad.p3_sse_c.toFixed(6), 'MPa']
+                                ]),
+
+                                // Line Load
+                                ...sectionTable("4. Line Load Along Inner Shell", ['Parameter', 'Value', 'Unit'], [
+                                    ['WL-OPE (Operating Condition)', results.lineLoad.wl_ope.toFixed(3), 'N/mm'],
+                                    ['WL-TEST (Hydrostatic Test)', results.lineLoad.wl_test.toFixed(3), 'N/mm'],
+                                    ['WL-OBE (OBE Seismic)', results.lineLoad.wl_obe.toFixed(3), 'N/mm'],
+                                    ['WL-SSE (SSE Seismic)', results.lineLoad.wl_sse.toFixed(3), 'N/mm']
+                                ]),
+
+                                // Verification Results header
                                 new Paragraph({
-                                    heading: HeadingLevel.HEADING_3,
-                                    children: [new TextRun({ text: "1. Static Liquid Pressure" })],
-                                    spacing: { before: 200, after: 100 }
+                                    heading: HeadingLevel.HEADING_2,
+                                    children: [new TextRun({ text: "VERIFICATION RESULTS", bold: true })],
+                                    spacing: { before: 400, after: 200 }
                                 }),
-                                new Table({
-                                    width: { size: 9360, type: WidthType.DXA },
-                                    rows: [
-                                        createTableRow(['Parameter', 'Value', 'Unit'], true),
-                                        createTableRow(['P1-OPE', results.staticPressure.p1_ope.toFixed(6), 'MPa']),
-                                        createTableRow(['P1-TEST', results.staticPressure.p1_test.toFixed(6), 'MPa']),
-                                        createTableRow(['P1-SEIS', results.staticPressure.p1_seis.toFixed(6), 'MPa'])
-                                    ]
-                                }),
-                                
+
+                                // Ring Concrete Strength Verification
+                                ...sectionTable("5. Ring Concrete Strength Verification",
+                                    ['Load Condition', 'Design Force (N/mm)', 'Resistance (N/mm)', 'Status'], [
+                                    ['Operating', results.ringConcrete.operating.design_force.toFixed(3), results.ringConcrete.operating.resistance.toFixed(3), results.ringConcrete.operating.status],
+                                    ['Hydrostatic Testing', results.ringConcrete.testing.design_force.toFixed(3), results.ringConcrete.testing.resistance.toFixed(3), results.ringConcrete.testing.status],
+                                    ['OBE Seismic', results.ringConcrete.obe.design_force.toFixed(3), results.ringConcrete.obe.resistance.toFixed(3), results.ringConcrete.obe.status],
+                                    ['SSE Seismic', results.ringConcrete.sse.design_force.toFixed(3), results.ringConcrete.sse.resistance.toFixed(3), results.ringConcrete.sse.status]
+                                ]),
+
+                                // Bottom Insulation - Center Part
+                                ...sectionTable("6. Bottom Insulation Verification - Center Part (Grade 800)",
+                                    ['Condition', 'Calc. Stress (MPa)', 'Allow. Stress (MPa)', 'SF', 'Status'],
+                                    Object.entries(results.insulation.centerPart).map(([key, val]) => [
+                                        key.charAt(0).toUpperCase() + key.slice(1),
+                                        val.calc_stress.toFixed(6),
+                                        val.allow_stress.toFixed(6),
+                                        String(val.safety_factor),
+                                        val.status
+                                    ])),
+
+                                // Bottom Insulation - Ring Part
+                                ...sectionTable("7. Bottom Insulation Verification - Ring Part (Grade 1600)",
+                                    ['Condition', 'Calc. Stress (MPa)', 'Allow. Stress (MPa)', 'SF', 'Status'],
+                                    Object.entries(results.insulation.ringPart).map(([key, val]) => [
+                                        key.charAt(0).toUpperCase() + key.slice(1),
+                                        val.calc_stress.toFixed(6),
+                                        val.allow_stress.toFixed(6),
+                                        String(val.safety_factor),
+                                        val.status
+                                    ])),
+
                                 // Watermark Notice at End of Document
                                 new Paragraph({
                                     spacing: { before: 800, after: 200 },
@@ -1445,7 +1603,7 @@
                     a.click();
                 } catch (error) {
                     console.error('Word export error:', error);
-                    alert('Error exporting to Word. Please try again.');
+                    alert('Error exporting to Word: ' + (error && error.message ? error.message : error));
                 } finally {
                     setExporting(false);
                 }
@@ -2022,16 +2180,19 @@
             
             // Function to restore watermark if tampered with
             function protectWatermark() {
-                const wm = document.getElementById(watermarkId);
-                if (!wm || wm.textContent !== watermarkText) {
-                    let watermark = document.getElementById(watermarkId);
-                    if (!watermark) {
-                        watermark = document.createElement('div');
-                        watermark.id = watermarkId;
-                        watermark.className = 'watermark';
-                        document.body.appendChild(watermark);
-                    }
-                    watermark.textContent = watermarkText;
+                let wm = document.getElementById(watermarkId);
+                if (!wm) {
+                    wm = document.createElement('div');
+                    wm.id = watermarkId;
+                    wm.className = 'watermark';
+                    document.body.appendChild(wm);
+                }
+                if (wm.textContent !== watermarkText) {
+                    wm.textContent = watermarkText;
+                }
+                if (wm.style.display === 'none' || wm.style.visibility === 'hidden') {
+                    wm.style.display = '';
+                    wm.style.visibility = '';
                 }
             }
             
