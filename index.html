@@ -1,2227 +1,868 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bottom Insulation Calculator - LNG Tank Design</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
-    <script>
-        // Fallback loader for docx if the primary CDN fails to define the global
-        if (typeof docx === 'undefined') {
-            document.write('<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"><\/script>');
-        }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bottom Insulation Calculator - LNG Tank Design</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
-        :root {
-            --bg-primary: #0a0e17;
-            --bg-secondary: #131824;
-            --bg-card: #1a2030;
-            --accent-blue: #00d4ff;
-            --accent-cyan: #00ffcc;
-            --accent-orange: #ff6b35;
-            --text-primary: #e8eef7;
-            --text-secondary: #8b96a8;
-            --border: #2a3544;
-            --success: #00ff88;
-            --warning: #ffaa00;
-            --danger: #ff4757;
-        }
+  :root{
+    --bg:#e9ebee; --panel:#ffffff; --panel-2:#f5f6f8;
+    --line:#c9ced6; --line-strong:#8a929e;
+    --ink:#1d242c; --muted:#5d6772;
+    --accent:#1f4e79; --accent-2:#2f6f4f; --danger:#9c2b2b; --blue:#1f4e79;
+    --input-ink:#0b3d62; --input-fill:#fff7df; --input-fill-2:#fff2c9; --input-border:#d8b765;
+    --shadow:0 1px 2px rgba(29,36,44,.10), 0 6px 18px rgba(29,36,44,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'IBM Plex Sans',Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45;}
+  .wrap{max-width:1320px;margin:0 auto;padding:24px 22px 70px;}
 
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-            min-height: 100vh;
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(0, 212, 255, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(0, 255, 204, 0.05) 0%, transparent 50%);
-        }
+  header.top{display:flex;align-items:stretch;justify-content:space-between;gap:18px;flex-wrap:wrap;
+    background:var(--panel);border:1px solid var(--line-strong);border-radius:3px;box-shadow:var(--shadow);
+    padding:0;margin-bottom:18px;overflow:hidden;}
+  .brand{display:flex;flex-direction:column;gap:3px;padding:14px 20px;border-right:1px solid var(--line);justify-content:center;}
+  .brand .kick{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted);font-weight:500;}
+  .brand h1{margin:0;font-size:clamp(19px,2.4vw,26px);font-weight:700;letter-spacing:-.01em;line-height:1.05;color:var(--ink);}
+  .brand h1 span{color:var(--accent);font-weight:600;}
+  .brand .sub{color:var(--muted);font-size:12.5px;max-width:560px;}
+  .top-actions{display:flex;gap:0;flex-wrap:wrap;align-items:stretch;}
+  button.btn{font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:500;letter-spacing:.01em;
+    cursor:pointer;border:none;border-left:1px solid var(--line);background:var(--panel);color:var(--ink);
+    padding:0 18px;border-radius:0;transition:background .12s,color .12s;}
+  button.btn:hover{background:var(--panel-2);color:var(--accent);}
+  button.btn.primary{background:var(--accent);color:#fff;}
+  button.btn.primary:hover{background:#163a5a;color:#fff;}
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
+  .legend{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;margin:0 0 16px;padding:8px 14px;
+    background:var(--panel);border:1px solid var(--line);border-radius:3px;
+    font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;color:var(--muted);}
+  .legend .lg-item{display:inline-flex;align-items:center;gap:7px;}
+  .legend .lg-swatch{width:13px;height:13px;border-radius:2px;border:1px solid var(--line-strong);display:inline-block;flex:0 0 auto;}
+  .legend .sw-input{background:var(--input-fill);border-color:var(--input-border);}
+  .legend .sw-calc{background:#fff;border-color:var(--line);}
+  .legend .sw-ok{background:#eaf3ee;border-color:#bcd9c8;}
+  .legend .sw-bad{background:#f6e9e9;border-color:#e0bdbd;}
 
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-            padding: 2rem;
-            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            position: relative;
-            overflow: hidden;
-        }
+  .card{background:var(--panel);border:1px solid var(--line-strong);border-radius:3px;box-shadow:var(--shadow);overflow:hidden;}
+  .card h2{margin:0;font-size:13px;letter-spacing:.02em;font-family:'IBM Plex Sans',sans-serif;color:#fff;font-weight:600;
+    padding:9px 14px;border-bottom:1px solid var(--line-strong);background:var(--accent);display:flex;align-items:center;gap:9px;}
+  .card h2 .num{background:rgba(255,255,255,.18);color:#fff;font-weight:600;border-radius:2px;font-family:'IBM Plex Mono',monospace;
+    min-width:24px;height:20px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;}
+  .card .body{padding:14px 16px;}
 
-        /* Progress bar removed */
+  .section-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.10em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line);}
+  .section-label:first-child{margin-top:0;}
+  .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:11px 16px;}
+  .field{margin-bottom:0;}
+  .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;font-weight:500;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .field .input-row{display:flex;align-items:center;gap:8px;}
+  .field input{width:100%;background:var(--input-fill);border:1px solid var(--input-border);color:var(--input-ink);
+    border-radius:2px;padding:6px 9px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;
+    transition:border-color .12s,box-shadow .12s,background .12s;}
+  .field input:hover{background:var(--input-fill-2);}
+  .field input:focus{outline:none;background:#fff;border-color:var(--accent);box-shadow:0 0 0 2px rgba(31,78,121,.20);}
+  .field .unit{min-width:36px;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
 
-        /* Permanent Watermark - Protected */
-        .watermark {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            opacity: 0.6;
-            font-family: 'JetBrains Mono', monospace;
-            z-index: 9999;
-            pointer-events: none;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-        }
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);}
+  .stat{background:var(--panel);padding:13px 15px;}
+  .stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-family:'IBM Plex Sans',sans-serif;font-weight:500;}
+  .stat .v{font-size:22px;font-weight:600;margin-top:3px;letter-spacing:-.01em;font-family:'IBM Plex Mono',monospace;color:var(--ink);}
+  .stat .v small{font-size:12px;color:var(--muted);font-weight:400;margin-left:3px;}
+  .stat .v.accent{color:var(--accent);} .stat .v.green{color:var(--accent-2);} .stat .v.red{color:var(--danger);}
 
-        @media print {
-            .watermark {
-                display: block !important;
-                opacity: 0.4;
-            }
-        }
+  .tablewrap{overflow-x:auto;}
+  table{border-collapse:collapse;width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;min-width:560px;}
+  thead th{text-align:right;padding:9px;color:#fff;font-weight:500;border-bottom:1px solid var(--line-strong);
+    white-space:nowrap;font-size:10.5px;letter-spacing:.02em;position:sticky;top:0;background:var(--accent);font-family:'IBM Plex Sans',sans-serif;}
+  thead th:first-child,tbody td:first-child{text-align:left;}
+  thead th.lcol{text-align:left;}
+  tbody td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody td.lcol{text-align:left;}
+  tbody tr:nth-child(even){background:var(--panel-2);}
+  tbody tr:hover{background:#eef3f8;}
+  tfoot td{padding:10px 9px;border-top:2px solid var(--line-strong);font-weight:700;text-align:right;background:var(--panel-2);}
+  tfoot td.lcol{text-align:left;color:var(--accent);}
 
-        h1 {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+  .check{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;
+    padding:3px 9px;border-radius:2px;font-weight:600;letter-spacing:.02em;border:1px solid transparent;}
+  .check.ok{background:#eaf3ee;color:var(--accent-2);border-color:#bcd9c8;}
+  .check.bad{background:#f6e9e9;color:var(--danger);border-color:#e0bdbd;}
 
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            font-weight: 300;
-        }
+  .kv{display:grid;grid-template-columns:1fr auto auto;gap:6px 14px;align-items:baseline;font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+  .kv .lbl{color:var(--muted);font-family:'IBM Plex Sans',sans-serif;}
+  .kv .val{text-align:right;font-weight:600;color:var(--ink);}
+  .kv .u{color:var(--muted);font-size:11px;min-width:42px;text-align:left;}
+  .kv .note{grid-column:1/-1;color:var(--muted);font-size:11px;font-family:'IBM Plex Sans',sans-serif;
+    padding:2px 0 8px;border-bottom:1px solid var(--line);margin-bottom:6px;}
 
-        .tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid var(--border);
-            overflow-x: auto;
-        }
+  .formula{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--panel-2);
+    border:1px solid var(--line);border-left:3px solid var(--accent);padding:10px 12px;border-radius:2px;margin-top:14px;line-height:1.7;}
+  .formula b{color:var(--ink);}
+  .formula .fname{color:var(--accent);font-weight:600;}
 
-        .tab {
-            padding: 1rem 1.5rem;
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 0.95rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border-bottom: 3px solid transparent;
-            font-family: 'JetBrains Mono', monospace;
-            white-space: nowrap;
-        }
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+  @media(max-width:760px){.two-col{grid-template-columns:1fr;}}
+  .stack{display:flex;flex-direction:column;gap:20px;}
 
-        .tab:hover {
-            color: var(--text-primary);
-            background: rgba(0, 212, 255, 0.05);
-        }
+  .banner{padding:14px 18px;border-radius:3px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:15px;
+    display:flex;align-items:center;gap:10px;border:1px solid transparent;margin-bottom:18px;}
+  .banner.ok{background:#eaf3ee;color:var(--accent-2);border-color:#bcd9c8;}
+  .banner.bad{background:#f6e9e9;color:var(--danger);border-color:#e0bdbd;}
 
-        .tab.active {
-            color: var(--accent-cyan);
-            border-bottom-color: var(--accent-cyan);
-        }
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:18px;border-bottom:2px solid var(--accent);padding-bottom:0;
+    position:sticky;top:0;z-index:30;background:var(--bg);}
+  .tab-btn{font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--line);
+    border-bottom:none;background:var(--panel-2);color:var(--muted);padding:9px 14px;border-radius:3px 3px 0 0;
+    transition:background .12s,color .12s;display:flex;align-items:center;gap:7px;position:relative;top:2px;}
+  .tab-btn .tnum{background:var(--line);color:var(--muted);font-weight:600;border-radius:2px;font-family:'IBM Plex Mono',monospace;
+    min-width:20px;height:18px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;transition:.12s;}
+  .tab-btn:hover{color:var(--ink);background:#fff;}
+  .tab-btn.active{color:var(--accent);background:#fff;font-weight:600;border-color:var(--accent);border-bottom-color:#fff;}
+  .tab-btn.active .tnum{background:var(--accent);color:#fff;}
+  .tab-panel{display:none;} .tab-panel.active{display:block;}
 
-        .card {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-        }
+  #devCredit{text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;font-weight:500;padding:16px 12px 24px;border-top:1px solid var(--line);margin-top:24px;}
 
-        .card:hover {
-            border-color: var(--accent-blue);
-            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
-        }
+  /* print-only report container, hidden on screen */
+  #printReport{display:none;}
 
-        .card-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--accent-cyan);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+  @media print{
+    @page{size:A4;margin:14mm 12mm;}
+    body{background:#fff;}
+    .wrap{max-width:none;padding:0;}
+    header.top,.legend,.tabs,.no-print{display:none !important;}
+    #screenContent{display:none !important;}
+    #printReport{display:block !important;}
+    #devCredit{color:#000 !important;display:block !important;}
+  }
 
-        .input-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .input-field {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        input {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-family: 'JetBrains Mono', monospace;
-            transition: all 0.3s ease;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
-        }
-
-        .unit {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            font-family: 'JetBrains Mono', monospace;
-            margin-top: 0.25rem;
-        }
-
-        .result-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-
-        .result-item {
-            background: var(--bg-secondary);
-            padding: 1rem;
-            border-radius: 10px;
-            border-left: 3px solid var(--accent-blue);
-        }
-
-        .result-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-
-        .result-value {
-            font-size: 1.2rem;
-            font-weight: 700;
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--accent-cyan);
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .status-ok {
-            background: rgba(0, 255, 136, 0.1);
-            color: var(--success);
-            border: 1px solid var(--success);
-        }
-
-        .status-ng {
-            background: rgba(255, 71, 87, 0.1);
-            color: var(--danger);
-            border: 1px solid var(--danger);
-        }
-
-        .verification-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
-        .verification-table th,
-        .verification-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .verification-table th {
-            background: var(--bg-secondary);
-            color: var(--accent-cyan);
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .verification-table td {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-        }
-
-        .verification-table tr:hover {
-            background: rgba(0, 212, 255, 0.03);
-        }
-
-        .summary-card {
-            background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
-            border: 2px solid var(--accent-blue);
-            padding: 2rem;
-            border-radius: 16px;
-            margin-top: 2rem;
-        }
-
-        .summary-status {
-            font-size: 2rem;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 1rem;
-        }
-
-        .export-buttons {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .export-btn {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            color: var(--bg-primary);
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            flex: 1;
-            min-width: 150px;
-        }
-
-        .export-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
-        }
-
-        .export-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .formula-section {
-            background: var(--bg-secondary);
-            padding: 1.5rem;
-            border-radius: 12px;
-            margin-top: 1rem;
-            border: 1px solid var(--border);
-        }
-
-        .formula-item {
-            margin-bottom: 1rem;
-            padding: 1rem;
-            background: var(--bg-card);
-            border-radius: 8px;
-        }
-
-        .formula-name {
-            font-weight: 600;
-            color: var(--accent-cyan);
-            margin-bottom: 0.5rem;
-        }
-
-        .formula-expression {
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            h1 { font-size: 1.8rem; }
-            .input-group { grid-template-columns: 1fr; }
-            .result-grid { grid-template-columns: 1fr; }
-            .export-buttons { flex-direction: column; }
-            .export-btn { min-width: 100%; }
-        }
-
-        @media print {
-            .tabs, .export-buttons, .formula-section { display: none !important; }
-        }
-    </style>
+  /* ---- print report styling ---- */
+  #printReport{font-family:'IBM Plex Sans',Arial,sans-serif;color:#111;}
+  #printReport .rpt-head{text-align:center;border-bottom:2px solid #1f4e79;padding-bottom:10px;margin-bottom:14px;}
+  #printReport .rpt-head h1{margin:0;font-size:20px;color:#1f4e79;}
+  #printReport .rpt-head .meta{font-size:11px;color:#444;margin-top:4px;font-family:'IBM Plex Mono',monospace;}
+  #printReport h3{font-size:13px;color:#fff;background:#1f4e79;padding:6px 10px;margin:16px 0 0;border-radius:2px;}
+  #printReport table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:0;min-width:0;
+    font-family:'IBM Plex Mono',monospace;page-break-inside:auto;}
+  #printReport th,#printReport td{border:1px solid #999;padding:4px 7px;text-align:right;}
+  #printReport th{background:#e8eef5;color:#1f4e79;font-family:'IBM Plex Sans',sans-serif;}
+  #printReport th:first-child,#printReport td:first-child{text-align:left;}
+  #printReport tr{page-break-inside:avoid;}
+  #printReport .ok{color:#2f6f4f;font-weight:700;}
+  #printReport .ng{color:#9c2b2b;font-weight:700;}
+  #printReport .fbox{border:1px solid #bbb;border-left:3px solid #1f4e79;background:#f5f6f8;padding:6px 9px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:6px;line-height:1.6;}
+  #printReport .fbox b{color:#1f4e79;}
+  #printReport .fbox .fb-title{font-family:'IBM Plex Sans',sans-serif;font-weight:700;color:#1f4e79;font-size:10.5px;margin-bottom:3px;}
+  #printReport .fbox .fb-generic{font-style:italic;color:#444;margin-bottom:5px;}
+  #printReport .fbox .fb-tbl{width:100%;border-collapse:collapse;margin-top:2px;}
+  #printReport .fbox .fb-tbl td{border:none;padding:2px 6px 2px 0;vertical-align:top;text-align:left;}
+  #printReport .fbox .fb-tbl .fb-lbl{font-weight:700;color:#1f4e79;white-space:nowrap;width:1%;}
+  #printReport .fbox .fb-tbl .fb-eq{color:#222;}
+  #printReport .rpt-overall{text-align:center;font-weight:700;font-size:14px;padding:8px;border:2px solid;border-radius:3px;margin:10px 0;}
+  #printReport .rpt-overall.ok{color:#2f6f4f;border-color:#2f6f4f;background:#eaf3ee;}
+  #printReport .rpt-overall.bad{color:#9c2b2b;border-color:#9c2b2b;background:#f6e9e9;}
+  #printReport .credit{text-align:center;margin-top:18px;padding-top:8px;border-top:1px solid #999;font-size:9px;
+    letter-spacing:.18em;text-transform:uppercase;color:#333;font-weight:bold;}
+</style>
 </head>
 <body>
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-
-        // Formulas Reference
-        const FORMULAS = {
-            staticPressure: {
-                p1_ope: "ρE × g × hM × 10⁻⁶",
-                p1_test: "ρW × g × ht × 10⁻⁶",
-                p1_seis: "ρE × g × hs × 10⁻⁶"
-            },
-            dynamicPressure: {
-                pv_obe: "√(Pv-OBE-Comp1² + Pv-OBE-Comp2²)",
-                pv_sse: "√(Pv-SSE-Comp1² + Pv-SSE-Comp2²)",
-                p2_obe: "Ph-OBE + Pv-OBE + Ps-OBE",
-                p2_sse: "Ph-SSE + Pv-SSE + Ps-SSE"
-            },
-            deadLoad: {
-                wA: "thickness × density × g × 10⁻⁶",
-                p3_ope_r: "wA + wR + wTA + wL",
-                p3_obe_r: "(1 + αvr-OBE × 0.3) × P3-OPE-R",
-                p3_sse_r: "(1 + αvr-SSE × 0.3) × P3-OPE-R"
-            },
-            lineLoad: {
-                ws: "shell_weight × g / (2π × R) / 1000",
-                wp: "(ρ × 9.80665 × t/2) × [H - (t/(2μkH)) × (1-e^(-2μkH/t))] / 1000",
-                wl_obe: "ws + wp + 0.3 × αvf-OBE × (ws + wp) + 4M-OBE/(πR² × 4 × 10⁶)"
-            },
-            ringConcrete: {
-                b1: "shell_thickness + 2 × weld_length + annular_thickness × 2",
-                b2: "3 × b1",
-                fcd: "αcc × fck / γc",
-                frdu: "Ac0 × fcd × √(Ac1/Ac0)"
-            },
-            insulation: {
-                center_operating: "P1-OPE + P3-OPE-C + Pg",
-                center_obe: "P1-SEIS + P2-OBE + P3-OBE-C + Pg",
-                ring_operating: "P1-OPE + P3-OPE-R + Pg + P5-OPE",
-                ring_sse: "P1-SEIS + P2-SSE + P3-SSE-R + Pg + P5-SSE"
-            }
-        };
-
-        // Calculation Engine
-        class BottomInsulationCalculator {
-            constructor(inputs) {
-                this.inputs = inputs;
-            }
-
-            calculateStaticLiquidPressure() {
-                const { lng_density, seawater_density, gravity, max_liquid_level, high_liquid_level, test_level } = this.inputs;
-                
-                return {
-                    p1_ope: (lng_density * gravity * max_liquid_level) / 1000000,
-                    p1_test: (seawater_density * gravity * test_level) / 1000000,
-                    p1_seis: (lng_density * gravity * high_liquid_level) / 1000000
-                };
-            }
-
-            calculateDynamicLiquidPressure() {
-                const { ph_obe, pv_obe_comp1, pv_obe_comp2, ps_obe, ph_sse, pv_sse_comp1, pv_sse_comp2, ps_sse } = this.inputs;
-                
-                const pv_obe = Math.sqrt(Math.pow(pv_obe_comp1, 2) + Math.pow(pv_obe_comp2, 2));
-                const pv_sse = Math.sqrt(Math.pow(pv_sse_comp1, 2) + Math.pow(pv_sse_comp2, 2));
-                
-                return {
-                    pv_obe,
-                    pv_sse,
-                    p2_obe: ph_obe + pv_obe + ps_obe,
-                    p2_sse: ph_sse + pv_sse + ps_sse
-                };
-            }
-
-            calculateDeadLoadPressure() {
-                const { 
-                    inner_annular_thickness, inner_annular_density,
-                    ring_concrete_thickness, ring_concrete_density,
-                    tcp_annular_thickness, tcp_annular_density,
-                    leveling_ring_thickness, leveling_ring_density,
-                    inner_bottom_thickness, inner_bottom_density,
-                    leveling_upper_thickness, leveling_upper_density,
-                    tcp_bottom_thickness, tcp_bottom_density,
-                    leveling_lower_thickness, leveling_lower_density,
-                    alpha_vr_obe, alpha_vr_sse, gravity
-                } = this.inputs;
-
-                // Ring Part
-                const wA = (inner_annular_thickness * inner_annular_density * gravity) / 1000000;
-                const wR = (ring_concrete_thickness * ring_concrete_density * gravity) / 1000000;
-                const wTA = (tcp_annular_thickness * tcp_annular_density * gravity) / 1000000;
-                const wL = (leveling_ring_thickness * leveling_ring_density * gravity) / 1000000;
-                
-                const p3_ope_r = wA + wR + wTA + wL;
-                const p3_ope_rc = wA;
-                
-                // Center Part
-                const wI = (inner_bottom_thickness * inner_bottom_density * gravity) / 1000000;
-                const wL1 = (leveling_upper_thickness * leveling_upper_density * gravity) / 1000000;
-                const wTB = (tcp_bottom_thickness * tcp_bottom_density * gravity) / 1000000;
-                const wL2 = (leveling_lower_thickness * leveling_lower_density * gravity) / 1000000;
-                
-                const p3_ope_c = wI + wL1 + wTB + wL2;
-                
-                return {
-                    p3_ope_r,
-                    p3_ope_rc,
-                    p3_ope_c,
-                    p3_obe_r: (1 + alpha_vr_obe * 0.3) * p3_ope_r,
-                    p3_obe_rc: (1 + alpha_vr_obe * 0.3) * p3_ope_rc,
-                    p3_obe_c: (1 + alpha_vr_obe * 0.3) * p3_ope_c,
-                    p3_sse_r: (1 + alpha_vr_sse * 0.3) * p3_ope_r,
-                    p3_sse_rc: (1 + alpha_vr_sse * 0.3) * p3_ope_rc,
-                    p3_sse_c: (1 + alpha_vr_sse * 0.3) * p3_ope_c
-                };
-            }
-
-            calculateLineLoad() {
-                const { 
-                    shell_weight, gravity, tank_radius, perlite_density, perlite_height, 
-                    perlite_thickness, friction_coef, pressure_ratio,
-                    alpha_vf_obe, alpha_vf_sse, moment_obe, moment_sse
-                } = this.inputs;
-
-                const ws = (shell_weight * gravity) / (2 * Math.PI * tank_radius) / 1000;
-                
-                const exp_term = Math.exp(-2 * friction_coef * pressure_ratio * perlite_height / perlite_thickness);
-                const wp = (perlite_density * 9.80665 * perlite_thickness / 2) * 
-                           (perlite_height - (perlite_thickness / (2 * friction_coef * pressure_ratio * perlite_height)) * 
-                           (1 - exp_term)) / 1000;
-                
-                const wl_ope = ws + wp;
-                const wl_test = ws;
-                
-                const wv_obe = 0.3 * alpha_vf_obe * wl_ope;
-                const wm_obe = (4 * moment_obe) / (Math.PI * Math.pow(tank_radius, 2) * 4 * 1000000);
-                const wl_obe = ws + wp + wv_obe + wm_obe;
-                
-                const wv_sse = 0.3 * alpha_vf_sse * wl_ope;
-                const wm_sse = (4 * moment_sse) / (Math.PI * Math.pow(tank_radius, 2) * 4 * 1000000);
-                const wl_sse = ws + wp + wv_sse + wm_sse;
-                
-                return { wl_ope, wl_test, wl_obe, wl_sse };
-            }
-
-            calculateRingConcreteVerification() {
-                const { 
-                    shell_thickness, weld_length, annular_thickness, 
-                    concrete_strength, safety_factor_normal, safety_factor_sse, coef_acc
-                } = this.inputs;
-                
-                const lineLoad = this.calculateLineLoad();
-                
-                const b1 = shell_thickness + 2 * weld_length + annular_thickness * 2;
-                const b2 = 3 * b1;
-                const ac0 = b1;
-                const ac1 = b2;
-                
-                const fcd_normal = coef_acc * concrete_strength / safety_factor_normal;
-                const fcd_sse = coef_acc * concrete_strength / safety_factor_sse;
-                
-                const frdu_normal = ac0 * fcd_normal * Math.sqrt(ac1 / ac0);
-                const frdu_sse = ac0 * fcd_sse * Math.sqrt(ac1 / ac0);
-                
-                const load_factor = 1.35;
-                
-                return {
-                    operating: {
-                        design_force: load_factor * lineLoad.wl_ope,
-                        resistance: frdu_normal,
-                        status: (load_factor * lineLoad.wl_ope) < frdu_normal ? 'OK' : 'NG'
-                    },
-                    testing: {
-                        design_force: load_factor * lineLoad.wl_test,
-                        resistance: frdu_normal,
-                        status: (load_factor * lineLoad.wl_test) < frdu_normal ? 'OK' : 'NG'
-                    },
-                    obe: {
-                        design_force: load_factor * lineLoad.wl_obe,
-                        resistance: frdu_normal,
-                        status: (load_factor * lineLoad.wl_obe) < frdu_normal ? 'OK' : 'NG'
-                    },
-                    sse: {
-                        design_force: load_factor * lineLoad.wl_sse,
-                        resistance: frdu_sse,
-                        status: (load_factor * lineLoad.wl_sse) < frdu_sse ? 'OK' : 'NG'
-                    }
-                };
-            }
-
-            calculateBottomInsulationVerification() {
-                const { 
-                    cellular_center_nominal, cellular_ring_nominal, gas_pressure,
-                    p5_operating, p5_testing, p5_obe, p5_sse
-                } = this.inputs;
-                
-                const staticPressure = this.calculateStaticLiquidPressure();
-                const dynamicPressure = this.calculateDynamicLiquidPressure();
-                const deadLoad = this.calculateDeadLoadPressure();
-                
-                const centerPart = {
-                    operating: {
-                        calc_stress: staticPressure.p1_ope + deadLoad.p3_ope_c + gas_pressure,
-                        allow_stress: cellular_center_nominal / 3,
-                        safety_factor: 3,
-                        status: null
-                    },
-                    testing: {
-                        calc_stress: staticPressure.p1_test + deadLoad.p3_ope_c,
-                        allow_stress: cellular_center_nominal / 2.25,
-                        safety_factor: 2.25,
-                        status: null
-                    },
-                    obe: {
-                        calc_stress: staticPressure.p1_seis + dynamicPressure.p2_obe + deadLoad.p3_obe_c + gas_pressure,
-                        allow_stress: cellular_center_nominal / 2,
-                        safety_factor: 2,
-                        status: null
-                    },
-                    sse: {
-                        calc_stress: staticPressure.p1_seis + dynamicPressure.p2_sse + deadLoad.p3_sse_c + gas_pressure,
-                        allow_stress: cellular_center_nominal / 1.5,
-                        safety_factor: 1.5,
-                        status: null
-                    }
-                };
-                
-                Object.keys(centerPart).forEach(key => {
-                    centerPart[key].status = centerPart[key].calc_stress < centerPart[key].allow_stress ? 'OK' : 'NG';
-                });
-                
-                const ringPart = {
-                    operating: {
-                        calc_stress: staticPressure.p1_ope + deadLoad.p3_ope_r + gas_pressure + p5_operating,
-                        allow_stress: cellular_ring_nominal / 3,
-                        safety_factor: 3,
-                        status: null
-                    },
-                    testing: {
-                        calc_stress: staticPressure.p1_test + deadLoad.p3_ope_r + p5_testing,
-                        allow_stress: cellular_ring_nominal / 2.25,
-                        safety_factor: 2.25,
-                        status: null
-                    },
-                    obe: {
-                        calc_stress: staticPressure.p1_seis + dynamicPressure.p2_obe + deadLoad.p3_obe_r + gas_pressure + p5_obe,
-                        allow_stress: cellular_ring_nominal / 2,
-                        safety_factor: 2,
-                        status: null
-                    },
-                    sse: {
-                        calc_stress: staticPressure.p1_seis + dynamicPressure.p2_sse + deadLoad.p3_sse_r + gas_pressure + p5_sse,
-                        allow_stress: cellular_ring_nominal / 1.5,
-                        safety_factor: 1.5,
-                        status: null
-                    }
-                };
-                
-                Object.keys(ringPart).forEach(key => {
-                    ringPart[key].status = ringPart[key].calc_stress < ringPart[key].allow_stress ? 'OK' : 'NG';
-                });
-                
-                return { centerPart, ringPart };
-            }
-
-            getSummary() {
-                const ringConcrete = this.calculateRingConcreteVerification();
-                const insulation = this.calculateBottomInsulationVerification();
-                
-                const ringConcreteStatus = Object.values(ringConcrete).every(v => v.status === 'OK');
-                const centerPartStatus = Object.values(insulation.centerPart).every(v => v.status === 'OK');
-                const ringPartStatus = Object.values(insulation.ringPart).every(v => v.status === 'OK');
-                
-                const overallStatus = ringConcreteStatus && centerPartStatus && ringPartStatus;
-                
-                return {
-                    ringConcreteStatus: ringConcreteStatus ? 'PASSED' : 'FAILED',
-                    centerPartStatus: centerPartStatus ? 'PASSED' : 'FAILED',
-                    ringPartStatus: ringPartStatus ? 'PASSED' : 'FAILED',
-                    overallStatus: overallStatus ? 'ALL VERIFICATIONS PASSED' : 'DESIGN VERIFICATION FAILED',
-                    maxOperatingStressCenter: insulation.centerPart.operating.calc_stress,
-                    maxOperatingStressRing: insulation.ringPart.operating.calc_stress
-                };
-            }
-        }
-
-        // React Component
-        function App() {
-            const [activeTab, setActiveTab] = useState('inputs');
-            const [exporting, setExporting] = useState(false);
-            const [inputs, setInputs] = useState({
-                // Material Properties
-                cellular_center_nominal: 0.8,
-                cellular_center_minimum: 0.55,
-                cellular_ring_nominal: 1.6,
-                cellular_ring_minimum: 1.1,
-                
-                // Liquid Properties
-                lng_density: 470.2,
-                seawater_density: 1020,
-                gravity: 9.80665,
-                
-                // Liquid Levels
-                max_liquid_level: 34.6,
-                high_liquid_level: 34,
-                test_level: 19.938,
-                
-                // Gas Pressure
-                gas_pressure: 0.029,
-                
-                // Seismic Accelerations
-                alpha_i_obe: 0.186,
-                alpha_vf_obe: 0.144,
-                alpha_c_obe: 0.008,
-                alpha_vr_obe: 0.088,
-                alpha_i_sse: 0.28,
-                alpha_vf_sse: 0.214,
-                alpha_c_sse: 0.016,
-                alpha_vr_sse: 0.166,
-                
-                // Dead Load Properties
-                inner_annular_thickness: 0.0113,
-                inner_annular_density: 7850,
-                ring_concrete_thickness: 0.15,
-                ring_concrete_density: 2500,
-                tcp_annular_thickness: 0.008,
-                tcp_annular_density: 7850,
-                leveling_ring_thickness: 0.05,
-                leveling_ring_density: 2345,
-                inner_bottom_thickness: 0.005,
-                inner_bottom_density: 7850,
-                leveling_upper_thickness: 0.153,
-                leveling_upper_density: 2345,
-                tcp_bottom_thickness: 0.005,
-                tcp_bottom_density: 7850,
-                leveling_lower_thickness: 0.05,
-                leveling_lower_density: 2345,
-                
-                // Ring Concrete Properties
-                shell_thickness: 24.9,
-                weld_length: 9,
-                annular_thickness: 11.3,
-                concrete_strength: 40,
-                safety_factor_normal: 1.5,
-                safety_factor_sse: 1.2,
-                coef_acc: 1,
-                
-                // Inner Shell Loading
-                shell_weight: 1256050,
-                perlite_height: 35.1,
-                perlite_density: 65,
-                perlite_thickness: 1.08,
-                friction_coef: 0.4142,
-                pressure_ratio: 0.3333,
-                tank_radius: 43,
-                moment_obe: 1197779000000,
-                moment_sse: 1282083000000,
-                
-                // Dynamic Pressure Components
-                ph_obe: 0.02317,
-                pv_obe_comp1: 0.004242,
-                pv_obe_comp2: 0.005632,
-                ps_obe: 0.00059,
-                ph_sse: 0.0233,
-                pv_sse_comp1: 0.007842,
-                pv_sse_comp2: 0.008312,
-                ps_sse: 0.00118,
-                
-                // P5 values (from FEM analysis)
-                p5_operating: 0.1108,
-                p5_testing: 0.0896,
-                p5_obe: 0.5064,
-                p5_sse: 0.5372
-            });
-
-            const [results, setResults] = useState(null);
-
-            useEffect(() => {
-                calculate();
-            }, [inputs]);
-
-            const calculate = () => {
-                const calculator = new BottomInsulationCalculator(inputs);
-                setResults({
-                    staticPressure: calculator.calculateStaticLiquidPressure(),
-                    dynamicPressure: calculator.calculateDynamicLiquidPressure(),
-                    deadLoad: calculator.calculateDeadLoadPressure(),
-                    lineLoad: calculator.calculateLineLoad(),
-                    ringConcrete: calculator.calculateRingConcreteVerification(),
-                    insulation: calculator.calculateBottomInsulationVerification(),
-                    summary: calculator.getSummary()
-                });
-            };
-
-            const handleInputChange = (field, value) => {
-                setInputs(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
-            };
-
-            const exportToPDF = async () => {
-                if (!results) return;
-                setExporting(true);
-                
-                try {
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF();
-                    let pageNumber = 1;
-                    
-                    const addPageNumber = () => {
-                        doc.setFontSize(8);
-                        doc.setTextColor(150);
-                        doc.text(`Page ${pageNumber}`, 200, 285, { align: 'right' });
-                        
-                        // Add watermark - Developed by : AY
-                        doc.setFontSize(7);
-                        doc.setTextColor(120, 120, 120);
-                        doc.text('Developed by : AY', 200, 290, { align: 'right' });
-                        
-                        pageNumber++;
-                    };
-                    
-                    // Title Page
-                    doc.setFontSize(20);
-                    doc.setTextColor(0, 100, 200);
-                    doc.text('BOTTOM INSULATION CALCULATION', 105, 30, { align: 'center' });
-                    
-                    doc.setFontSize(14);
-                    doc.setTextColor(100, 100, 100);
-                    doc.text('LNG Tank Design Verification Report', 105, 40, { align: 'center' });
-                    doc.text(`Date: ${new Date().toLocaleString()}`, 105, 48, { align: 'center' });
-                    
-                    doc.setFontSize(16);
-                    doc.setTextColor(0, 0, 0);
-                    doc.text('CALCULATION SUMMARY', 20, 70);
-                    
-                    const statusColor = results.summary.overallStatus === 'ALL VERIFICATIONS PASSED' ? [0, 150, 0] : [200, 0, 0];
-                    doc.setFontSize(14);
-                    doc.setTextColor(...statusColor);
-                    doc.text(results.summary.overallStatus, 20, 80);
-                    
-                    doc.autoTable({
-                        startY: 90,
-                        head: [['Verification Item', 'Status']],
-                        body: [
-                            ['Ring Concrete Verification', results.summary.ringConcreteStatus],
-                            ['Bottom Insulation - Center Part', results.summary.centerPartStatus],
-                            ['Bottom Insulation - Ring Part', results.summary.ringPartStatus]
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 11 },
-                        bodyStyles: { fontSize: 10 }
-                    });
-                    
-                    let yPos = doc.lastAutoTable.finalY + 15;
-                    
-                    doc.setFontSize(12);
-                    doc.setTextColor(0, 0, 0);
-                    doc.text('Key Design Values', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['Max Operating Stress - Center Part', results.summary.maxOperatingStressCenter.toFixed(6), 'MPa'],
-                            ['Max Operating Stress - Ring Part', results.summary.maxOperatingStressRing.toFixed(6), 'MPa']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 }
-                    });
-                    
-                    addPageNumber();
-                    
-                    // INPUT PARAMETERS SECTION
-                    doc.addPage();
-                    yPos = 20;
-                    
-                    doc.setFontSize(18);
-                    doc.setTextColor(0, 100, 200);
-                    doc.text('INPUT PARAMETERS', 20, yPos);
-                    yPos += 10;
-                    
-                    // Material Properties
-                    doc.setFontSize(13);
-                    doc.setTextColor(0, 0, 0);
-                    doc.text('1. Material Properties', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['Cellular Glass Nominal Strength (Center)', inputs.cellular_center_nominal, 'MPa'],
-                            ['Cellular Glass Minimum Strength (Center)', inputs.cellular_center_minimum, 'MPa'],
-                            ['Cellular Glass Nominal Strength (Ring)', inputs.cellular_ring_nominal, 'MPa'],
-                            ['Cellular Glass Minimum Strength (Ring)', inputs.cellular_ring_minimum, 'MPa']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    yPos = doc.lastAutoTable.finalY + 10;
-                    
-                    // Liquid Properties
-                    doc.setFontSize(13);
-                    doc.text('2. Liquid Properties', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['LNG Density', inputs.lng_density, 'kg/m³'],
-                            ['Seawater Density', inputs.seawater_density, 'kg/m³'],
-                            ['Gravity Acceleration', inputs.gravity, 'm/s²']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    yPos = doc.lastAutoTable.finalY + 10;
-                    
-                    // Liquid Levels
-                    doc.setFontSize(13);
-                    doc.text('3. Liquid Levels & Pressure', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['Max Design Liquid Level (Operating)', inputs.max_liquid_level, 'm'],
-                            ['High Liquid Level (OBE & SSE)', inputs.high_liquid_level, 'm'],
-                            ['Hydrostatic Test Level', inputs.test_level, 'm'],
-                            ['Gas Pressure', inputs.gas_pressure, 'MPa']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    addPageNumber();
-                    
-                    // Seismic Accelerations
-                    doc.addPage();
-                    yPos = 20;
-                    
-                    doc.setFontSize(13);
-                    doc.text('4. Seismic Accelerations', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['Impulsive LNG - Horizontal (αi) - OBE', inputs.alpha_i_obe, 'G'],
-                            ['Impulsive LNG - Horizontal (αi) - SSE', inputs.alpha_i_sse, 'G'],
-                            ['Impulsive LNG - Vertical (αvf) - OBE', inputs.alpha_vf_obe, 'G'],
-                            ['Impulsive LNG - Vertical (αvf) - SSE', inputs.alpha_vf_sse, 'G'],
-                            ['Convective LNG - Horizontal (αc) - OBE', inputs.alpha_c_obe, 'G'],
-                            ['Convective LNG - Horizontal (αc) - SSE', inputs.alpha_c_sse, 'G'],
-                            ['Outer Tank - Vertical (αvr) - OBE', inputs.alpha_vr_obe, 'G'],
-                            ['Outer Tank - Vertical (αvr) - SSE', inputs.alpha_vr_sse, 'G']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    yPos = doc.lastAutoTable.finalY + 10;
-                    
-                    // Tank Geometry
-                    doc.setFontSize(13);
-                    doc.text('5. Tank Geometry & Inner Shell Loading', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['Tank Radius', inputs.tank_radius, 'm'],
-                            ['Self-weight of Inner Shell & Stiffener', inputs.shell_weight, 'kg'],
-                            ['Perlite Insulation Height', inputs.perlite_height, 'm'],
-                            ['Perlite Thickness', inputs.perlite_thickness, 'm'],
-                            ['Perlite Density', inputs.perlite_density, 'kg/m³'],
-                            ['Friction Coefficient (μ)', inputs.friction_coef, '-'],
-                            ['Pressure Ratio (k)', inputs.pressure_ratio, '-'],
-                            ['Overturning Moment - OBE', inputs.moment_obe.toExponential(2), 'N·mm'],
-                            ['Overturning Moment - SSE', inputs.moment_sse.toExponential(2), 'N·mm']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    addPageNumber();
-                    
-                    // Dead Load Components
-                    doc.addPage();
-                    yPos = 20;
-                    
-                    doc.setFontSize(13);
-                    doc.text('6. Dead Load Components', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Component', 'Thickness (m)', 'Density (kg/m³)']],
-                        body: [
-                            ['Inner Tank Annular Plate', inputs.inner_annular_thickness, inputs.inner_annular_density],
-                            ['Ring Concrete', inputs.ring_concrete_thickness, inputs.ring_concrete_density],
-                            ['TCP Annular Plate', inputs.tcp_annular_thickness, inputs.tcp_annular_density],
-                            ['Leveling Ring', inputs.leveling_ring_thickness, inputs.leveling_ring_density],
-                            ['Inner Tank Bottom Plate', inputs.inner_bottom_thickness, inputs.inner_bottom_density],
-                            ['Leveling Concrete (Upper)', inputs.leveling_upper_thickness, inputs.leveling_upper_density],
-                            ['TCP Bottom Plate', inputs.tcp_bottom_thickness, inputs.tcp_bottom_density],
-                            ['Leveling Concrete (Lower)', inputs.leveling_lower_thickness, inputs.leveling_lower_density]
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    yPos = doc.lastAutoTable.finalY + 10;
-                    
-                    // Ring Concrete Properties
-                    doc.setFontSize(13);
-                    doc.text('7. Ring Concrete Verification Properties', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['Shell Thickness', inputs.shell_thickness, 'mm'],
-                            ['Weld Length', inputs.weld_length, 'mm'],
-                            ['Annular Plate Thickness', inputs.annular_thickness, 'mm'],
-                            ['Concrete Compressive Strength', inputs.concrete_strength, 'MPa'],
-                            ['Safety Factor (Normal)', inputs.safety_factor_normal, '-'],
-                            ['Safety Factor (SSE)', inputs.safety_factor_sse, '-'],
-                            ['Coefficient αcc', inputs.coef_acc, '-']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    addPageNumber();
-                    
-                    // CALCULATION RESULTS SECTION
-                    doc.addPage();
-                    yPos = 20;
-                    
-                    doc.setFontSize(18);
-                    doc.setTextColor(0, 100, 200);
-                    doc.text('DETAILED CALCULATION RESULTS', 20, yPos);
-                    yPos += 10;
-                    
-                    // Static Liquid Pressure
-                    doc.setFontSize(13);
-                    doc.setTextColor(0, 0, 0);
-                    doc.text('1. Static Liquid Pressure', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['P1-OPE (Operating Condition)', results.staticPressure.p1_ope.toFixed(6), 'MPa'],
-                            ['P1-TEST (Hydrostatic Test)', results.staticPressure.p1_test.toFixed(6), 'MPa'],
-                            ['P1-SEIS (Seismic Condition)', results.staticPressure.p1_seis.toFixed(6), 'MPa']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    yPos = doc.lastAutoTable.finalY + 10;
-                    
-                    // Dynamic Liquid Pressure
-                    doc.setFontSize(13);
-                    doc.text('2. Dynamic Liquid Pressure', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['Pv-OBE (Vertical Seismic Component)', results.dynamicPressure.pv_obe.toFixed(6), 'MPa'],
-                            ['P2-OBE (Total Dynamic Pressure - OBE)', results.dynamicPressure.p2_obe.toFixed(6), 'MPa'],
-                            ['Pv-SSE (Vertical Seismic Component)', results.dynamicPressure.pv_sse.toFixed(6), 'MPa'],
-                            ['P2-SSE (Total Dynamic Pressure - SSE)', results.dynamicPressure.p2_sse.toFixed(6), 'MPa']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    yPos = doc.lastAutoTable.finalY + 10;
-                    
-                    // Dead Load Pressure
-                    doc.setFontSize(13);
-                    doc.text('3. Dead Load Compressive Force', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['P3-OPE-R (Ring - Operating)', results.deadLoad.p3_ope_r.toFixed(6), 'MPa'],
-                            ['P3-OPE-C (Center - Operating)', results.deadLoad.p3_ope_c.toFixed(6), 'MPa'],
-                            ['P3-OBE-R (Ring - OBE)', results.deadLoad.p3_obe_r.toFixed(6), 'MPa'],
-                            ['P3-OBE-C (Center - OBE)', results.deadLoad.p3_obe_c.toFixed(6), 'MPa'],
-                            ['P3-SSE-R (Ring - SSE)', results.deadLoad.p3_sse_r.toFixed(6), 'MPa'],
-                            ['P3-SSE-C (Center - SSE)', results.deadLoad.p3_sse_c.toFixed(6), 'MPa']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    addPageNumber();
-                    
-                    // Line Load
-                    doc.addPage();
-                    yPos = 20;
-                    
-                    doc.setFontSize(13);
-                    doc.text('4. Line Load Along Inner Shell', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Parameter', 'Value', 'Unit']],
-                        body: [
-                            ['WL-OPE (Operating Condition)', results.lineLoad.wl_ope.toFixed(3), 'N/mm'],
-                            ['WL-TEST (Hydrostatic Test)', results.lineLoad.wl_test.toFixed(3), 'N/mm'],
-                            ['WL-OBE (OBE Seismic)', results.lineLoad.wl_obe.toFixed(3), 'N/mm'],
-                            ['WL-SSE (SSE Seismic)', results.lineLoad.wl_sse.toFixed(3), 'N/mm']
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    yPos = doc.lastAutoTable.finalY + 15;
-                    
-                    // VERIFICATION RESULTS
-                    doc.setFontSize(16);
-                    doc.setTextColor(0, 100, 200);
-                    doc.text('VERIFICATION RESULTS', 20, yPos);
-                    yPos += 10;
-                    
-                    // Ring Concrete Verification
-                    doc.setFontSize(13);
-                    doc.setTextColor(0, 0, 0);
-                    doc.text('5. Ring Concrete Strength Verification', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Load Condition', 'Design Force (N/mm)', 'Resistance (N/mm)', 'Status']],
-                        body: [
-                            ['Operating', results.ringConcrete.operating.design_force.toFixed(3), 
-                             results.ringConcrete.operating.resistance.toFixed(3), results.ringConcrete.operating.status],
-                            ['Hydrostatic Testing', results.ringConcrete.testing.design_force.toFixed(3), 
-                             results.ringConcrete.testing.resistance.toFixed(3), results.ringConcrete.testing.status],
-                            ['OBE Seismic', results.ringConcrete.obe.design_force.toFixed(3), 
-                             results.ringConcrete.obe.resistance.toFixed(3), results.ringConcrete.obe.status],
-                            ['SSE Seismic', results.ringConcrete.sse.design_force.toFixed(3), 
-                             results.ringConcrete.sse.resistance.toFixed(3), results.ringConcrete.sse.status]
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    addPageNumber();
-                    
-                    // Bottom Insulation - Center Part
-                    doc.addPage();
-                    yPos = 20;
-                    
-                    doc.setFontSize(13);
-                    doc.text('6. Bottom Insulation Verification - Center Part (Grade 800)', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Condition', 'Calc. Stress (MPa)', 'Allow. Stress (MPa)', 'SF', 'Status']],
-                        body: Object.entries(results.insulation.centerPart).map(([key, val]) => [
-                            key.charAt(0).toUpperCase() + key.slice(1),
-                            val.calc_stress.toFixed(6),
-                            val.allow_stress.toFixed(6),
-                            val.safety_factor,
-                            val.status
-                        ]),
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    yPos = doc.lastAutoTable.finalY + 15;
-                    
-                    // Bottom Insulation - Ring Part
-                    doc.setFontSize(13);
-                    doc.text('7. Bottom Insulation Verification - Ring Part (Grade 1600)', 20, yPos);
-                    yPos += 5;
-                    
-                    doc.autoTable({
-                        startY: yPos,
-                        head: [['Condition', 'Calc. Stress (MPa)', 'Allow. Stress (MPa)', 'SF', 'Status']],
-                        body: Object.entries(results.insulation.ringPart).map(([key, val]) => [
-                            key.charAt(0).toUpperCase() + key.slice(1),
-                            val.calc_stress.toFixed(6),
-                            val.allow_stress.toFixed(6),
-                            val.safety_factor,
-                            val.status
-                        ]),
-                        theme: 'grid',
-                        headStyles: { fillColor: [0, 100, 200], fontSize: 10 },
-                        bodyStyles: { fontSize: 9 },
-                        margin: { left: 20 }
-                    });
-                    
-                    addPageNumber();
-                    
-                    // Add PDF metadata for watermark protection
-                    doc.setProperties({
-                        title: 'Bottom Insulation Calculation Report - Developed by : AY',
-                        subject: 'LNG Tank Design Verification',
-                        author: 'AY',
-                        keywords: 'LNG, Tank, Insulation, Calculation, Developed by AY',
-                        creator: 'AY - Bottom Insulation Calculator'
-                    });
-                    
-                    // Save PDF
-                    doc.save(`Bottom_Insulation_Calculation_Report_${Date.now()}.pdf`);
-                } catch (error) {
-                    console.error('PDF export error:', error);
-                    alert('Error exporting to PDF. Please try again.');
-                } finally {
-                    setExporting(false);
-                }
-            };
-
-            const exportToWord = async () => {
-                if (!results) return;
-                setExporting(true);
-                
-                try {
-                    if (typeof docx === 'undefined' || !docx.Document) {
-                        alert('The Word library (docx) could not be loaded. This usually means no internet connection or the CDN is blocked. Please check your connection and reload the page.');
-                        return;
-                    }
-                    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
-                            AlignmentType, WidthType, BorderStyle, HeadingLevel, Footer } = docx;
-                    
-                    const border = { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" };
-                    const borders = { top: border, bottom: border, left: border, right: border };
-                    
-                    const createTableRow = (cells, isHeader = false) => {
-                        return new TableRow({
-                            children: cells.map((cell, index) => {
-                                let widths;
-                                if (cells.length === 2) widths = [6000, 3360];
-                                else if (cells.length === 3) widths = [5000, 2360, 2000];
-                                else {
-                                    const w = Math.floor(9360 / cells.length);
-                                    widths = cells.map(() => w);
-                                }
-                                return new TableCell({
-                                    borders,
-                                    width: { size: widths[index], type: WidthType.DXA },
-                                    children: [new Paragraph({
-                                        children: [new TextRun({ text: String(cell), bold: isHeader })]
-                                    })]
-                                });
-                            })
-                        });
-                    };
-
-                    // Helper: returns [heading paragraph, table] for a titled section
-                    const sectionTable = (title, header, rows) => {
-                        return [
-                            new Paragraph({
-                                heading: HeadingLevel.HEADING_3,
-                                children: [new TextRun({ text: title })],
-                                spacing: { before: 200, after: 100 }
-                            }),
-                            new Table({
-                                width: { size: 9360, type: WidthType.DXA },
-                                rows: [
-                                    createTableRow(header, true),
-                                    ...rows.map(r => createTableRow(r))
-                                ]
-                            }),
-                            new Paragraph({ text: "", spacing: { after: 200 } })
-                        ];
-                    };
-                    
-                    const doc = new Document({
-                        creator: "AY",
-                        title: "Bottom Insulation Calculation Report - Developed by : AY",
-                        description: "LNG Tank Design Verification - This document was developed by AY",
-                        subject: "LNG Tank Bottom Insulation Calculation",
-                        keywords: ["LNG", "Tank", "Insulation", "Calculation", "Developed by AY"],
-                        sections: [{
-                            properties: {
-                                page: {
-                                    margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
-                                }
-                            },
-                            footers: {
-                                default: new Footer({
-                                    children: [
-                                        new Paragraph({
-                                            alignment: AlignmentType.RIGHT,
-                                            children: [
-                                                new TextRun({
-                                                    text: "Developed by : AY",
-                                                    size: 16,
-                                                    color: "808080",
-                                                    italics: true
-                                                })
-                                            ]
-                                        })
-                                    ]
-                                })
-                            },
-                            children: [
-                                // Title
-                                new Paragraph({
-                                    heading: HeadingLevel.HEADING_1,
-                                    alignment: AlignmentType.CENTER,
-                                    children: [new TextRun({ text: "BOTTOM INSULATION CALCULATION", bold: true, size: 32 })],
-                                    spacing: { after: 200 }
-                                }),
-                                new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    children: [new TextRun({ text: "LNG Tank Design Verification Report", size: 24 })],
-                                    spacing: { after: 100 }
-                                }),
-                                new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    children: [new TextRun({ text: `Date: ${new Date().toLocaleString()}`, size: 20 })],
-                                    spacing: { after: 400 }
-                                }),
-                                
-                                // Summary Section
-                                new Paragraph({
-                                    heading: HeadingLevel.HEADING_2,
-                                    children: [new TextRun({ text: "CALCULATION SUMMARY", bold: true })],
-                                    spacing: { before: 200, after: 200 }
-                                }),
-                                new Paragraph({
-                                    children: [new TextRun({ 
-                                        text: results.summary.overallStatus, 
-                                        bold: true,
-                                        size: 28,
-                                        color: results.summary.overallStatus === 'ALL VERIFICATIONS PASSED' ? "00AA00" : "AA0000"
-                                    })],
-                                    spacing: { after: 200 }
-                                }),
-                                
-                                // Summary Table
-                                new Table({
-                                    width: { size: 9360, type: WidthType.DXA },
-                                    rows: [
-                                        createTableRow(['Verification Item', 'Status'], true),
-                                        createTableRow(['Ring Concrete Verification', results.summary.ringConcreteStatus]),
-                                        createTableRow(['Bottom Insulation - Center Part', results.summary.centerPartStatus]),
-                                        createTableRow(['Bottom Insulation - Ring Part', results.summary.ringPartStatus])
-                                    ]
-                                }),
-                                
-                                new Paragraph({ text: "", spacing: { after: 300 } }),
-                                
-                                // INPUT PARAMETERS SECTION
-                                new Paragraph({
-                                    heading: HeadingLevel.HEADING_2,
-                                    children: [new TextRun({ text: "INPUT PARAMETERS", bold: true })],
-                                    spacing: { before: 300, after: 200 }
-                                }),
-                                
-                                // Material Properties
-                                new Paragraph({
-                                    heading: HeadingLevel.HEADING_3,
-                                    children: [new TextRun({ text: "1. Material Properties" })],
-                                    spacing: { before: 200, after: 100 }
-                                }),
-                                new Table({
-                                    width: { size: 9360, type: WidthType.DXA },
-                                    rows: [
-                                        createTableRow(['Parameter', 'Value', 'Unit'], true),
-                                        createTableRow(['Cellular Glass Nominal (Center)', inputs.cellular_center_nominal, 'MPa']),
-                                        createTableRow(['Cellular Glass Nominal (Ring)', inputs.cellular_ring_nominal, 'MPa'])
-                                    ]
-                                }),
-                                
-                                new Paragraph({ text: "", spacing: { after: 200 } }),
-
-                                // Full Material Properties
-                                ...sectionTable("1. Material Properties (full)", ['Parameter', 'Value', 'Unit'], [
-                                    ['Cellular Glass Nominal Strength (Center)', inputs.cellular_center_nominal, 'MPa'],
-                                    ['Cellular Glass Minimum Strength (Center)', inputs.cellular_center_minimum, 'MPa'],
-                                    ['Cellular Glass Nominal Strength (Ring)', inputs.cellular_ring_nominal, 'MPa'],
-                                    ['Cellular Glass Minimum Strength (Ring)', inputs.cellular_ring_minimum, 'MPa']
-                                ]),
-
-                                // Liquid Properties
-                                ...sectionTable("2. Liquid Properties", ['Parameter', 'Value', 'Unit'], [
-                                    ['LNG Density', inputs.lng_density, 'kg/m\u00b3'],
-                                    ['Seawater Density', inputs.seawater_density, 'kg/m\u00b3'],
-                                    ['Gravity Acceleration', inputs.gravity, 'm/s\u00b2']
-                                ]),
-
-                                // Liquid Levels & Pressure
-                                ...sectionTable("3. Liquid Levels & Pressure", ['Parameter', 'Value', 'Unit'], [
-                                    ['Max Design Liquid Level (Operating)', inputs.max_liquid_level, 'm'],
-                                    ['High Liquid Level (OBE & SSE)', inputs.high_liquid_level, 'm'],
-                                    ['Hydrostatic Test Level', inputs.test_level, 'm'],
-                                    ['Gas Pressure', inputs.gas_pressure, 'MPa']
-                                ]),
-
-                                // Seismic Accelerations
-                                ...sectionTable("4. Seismic Accelerations", ['Parameter', 'Value', 'Unit'], [
-                                    ['Impulsive LNG - Horizontal (\u03b1i) - OBE', inputs.alpha_i_obe, 'G'],
-                                    ['Impulsive LNG - Horizontal (\u03b1i) - SSE', inputs.alpha_i_sse, 'G'],
-                                    ['Impulsive LNG - Vertical (\u03b1vf) - OBE', inputs.alpha_vf_obe, 'G'],
-                                    ['Impulsive LNG - Vertical (\u03b1vf) - SSE', inputs.alpha_vf_sse, 'G'],
-                                    ['Convective LNG - Horizontal (\u03b1c) - OBE', inputs.alpha_c_obe, 'G'],
-                                    ['Convective LNG - Horizontal (\u03b1c) - SSE', inputs.alpha_c_sse, 'G'],
-                                    ['Outer Tank - Vertical (\u03b1vr) - OBE', inputs.alpha_vr_obe, 'G'],
-                                    ['Outer Tank - Vertical (\u03b1vr) - SSE', inputs.alpha_vr_sse, 'G']
-                                ]),
-
-                                // Tank Geometry
-                                ...sectionTable("5. Tank Geometry & Inner Shell Loading", ['Parameter', 'Value', 'Unit'], [
-                                    ['Tank Radius', inputs.tank_radius, 'm'],
-                                    ['Self-weight of Inner Shell & Stiffener', inputs.shell_weight, 'kg'],
-                                    ['Perlite Insulation Height', inputs.perlite_height, 'm'],
-                                    ['Perlite Thickness', inputs.perlite_thickness, 'm'],
-                                    ['Perlite Density', inputs.perlite_density, 'kg/m\u00b3'],
-                                    ['Friction Coefficient (\u03bc)', inputs.friction_coef, '-'],
-                                    ['Pressure Ratio (k)', inputs.pressure_ratio, '-'],
-                                    ['Overturning Moment - OBE', inputs.moment_obe.toExponential(2), 'N\u00b7mm'],
-                                    ['Overturning Moment - SSE', inputs.moment_sse.toExponential(2), 'N\u00b7mm']
-                                ]),
-
-                                // Dead Load Components
-                                ...sectionTable("6. Dead Load Components", ['Component', 'Thickness (m)', 'Density (kg/m\u00b3)'], [
-                                    ['Inner Tank Annular Plate', inputs.inner_annular_thickness, inputs.inner_annular_density],
-                                    ['Ring Concrete', inputs.ring_concrete_thickness, inputs.ring_concrete_density],
-                                    ['TCP Annular Plate', inputs.tcp_annular_thickness, inputs.tcp_annular_density],
-                                    ['Leveling Ring', inputs.leveling_ring_thickness, inputs.leveling_ring_density],
-                                    ['Inner Tank Bottom Plate', inputs.inner_bottom_thickness, inputs.inner_bottom_density],
-                                    ['Leveling Concrete (Upper)', inputs.leveling_upper_thickness, inputs.leveling_upper_density],
-                                    ['TCP Bottom Plate', inputs.tcp_bottom_thickness, inputs.tcp_bottom_density],
-                                    ['Leveling Concrete (Lower)', inputs.leveling_lower_thickness, inputs.leveling_lower_density]
-                                ]),
-
-                                // Ring Concrete Verification Properties
-                                ...sectionTable("7. Ring Concrete Verification Properties", ['Parameter', 'Value', 'Unit'], [
-                                    ['Shell Thickness', inputs.shell_thickness, 'mm'],
-                                    ['Weld Length', inputs.weld_length, 'mm'],
-                                    ['Annular Plate Thickness', inputs.annular_thickness, 'mm'],
-                                    ['Concrete Compressive Strength', inputs.concrete_strength, 'MPa'],
-                                    ['Safety Factor (Normal)', inputs.safety_factor_normal, '-'],
-                                    ['Safety Factor (SSE)', inputs.safety_factor_sse, '-'],
-                                    ['Coefficient \u03b1cc', inputs.coef_acc, '-']
-                                ]),
-
-                                // RESULTS SECTION
-                                new Paragraph({
-                                    heading: HeadingLevel.HEADING_2,
-                                    children: [new TextRun({ text: "DETAILED CALCULATION RESULTS", bold: true })],
-                                    spacing: { before: 400, after: 200 }
-                                }),
-
-                                // Static Liquid Pressure
-                                ...sectionTable("1. Static Liquid Pressure", ['Parameter', 'Value', 'Unit'], [
-                                    ['P1-OPE (Operating Condition)', results.staticPressure.p1_ope.toFixed(6), 'MPa'],
-                                    ['P1-TEST (Hydrostatic Test)', results.staticPressure.p1_test.toFixed(6), 'MPa'],
-                                    ['P1-SEIS (Seismic Condition)', results.staticPressure.p1_seis.toFixed(6), 'MPa']
-                                ]),
-
-                                // Dynamic Liquid Pressure
-                                ...sectionTable("2. Dynamic Liquid Pressure", ['Parameter', 'Value', 'Unit'], [
-                                    ['Pv-OBE (Vertical Seismic Component)', results.dynamicPressure.pv_obe.toFixed(6), 'MPa'],
-                                    ['P2-OBE (Total Dynamic Pressure - OBE)', results.dynamicPressure.p2_obe.toFixed(6), 'MPa'],
-                                    ['Pv-SSE (Vertical Seismic Component)', results.dynamicPressure.pv_sse.toFixed(6), 'MPa'],
-                                    ['P2-SSE (Total Dynamic Pressure - SSE)', results.dynamicPressure.p2_sse.toFixed(6), 'MPa']
-                                ]),
-
-                                // Dead Load Compressive Force
-                                ...sectionTable("3. Dead Load Compressive Force", ['Parameter', 'Value', 'Unit'], [
-                                    ['P3-OPE-R (Ring - Operating)', results.deadLoad.p3_ope_r.toFixed(6), 'MPa'],
-                                    ['P3-OPE-C (Center - Operating)', results.deadLoad.p3_ope_c.toFixed(6), 'MPa'],
-                                    ['P3-OBE-R (Ring - OBE)', results.deadLoad.p3_obe_r.toFixed(6), 'MPa'],
-                                    ['P3-OBE-C (Center - OBE)', results.deadLoad.p3_obe_c.toFixed(6), 'MPa'],
-                                    ['P3-SSE-R (Ring - SSE)', results.deadLoad.p3_sse_r.toFixed(6), 'MPa'],
-                                    ['P3-SSE-C (Center - SSE)', results.deadLoad.p3_sse_c.toFixed(6), 'MPa']
-                                ]),
-
-                                // Line Load
-                                ...sectionTable("4. Line Load Along Inner Shell", ['Parameter', 'Value', 'Unit'], [
-                                    ['WL-OPE (Operating Condition)', results.lineLoad.wl_ope.toFixed(3), 'N/mm'],
-                                    ['WL-TEST (Hydrostatic Test)', results.lineLoad.wl_test.toFixed(3), 'N/mm'],
-                                    ['WL-OBE (OBE Seismic)', results.lineLoad.wl_obe.toFixed(3), 'N/mm'],
-                                    ['WL-SSE (SSE Seismic)', results.lineLoad.wl_sse.toFixed(3), 'N/mm']
-                                ]),
-
-                                // Verification Results header
-                                new Paragraph({
-                                    heading: HeadingLevel.HEADING_2,
-                                    children: [new TextRun({ text: "VERIFICATION RESULTS", bold: true })],
-                                    spacing: { before: 400, after: 200 }
-                                }),
-
-                                // Ring Concrete Strength Verification
-                                ...sectionTable("5. Ring Concrete Strength Verification",
-                                    ['Load Condition', 'Design Force (N/mm)', 'Resistance (N/mm)', 'Status'], [
-                                    ['Operating', results.ringConcrete.operating.design_force.toFixed(3), results.ringConcrete.operating.resistance.toFixed(3), results.ringConcrete.operating.status],
-                                    ['Hydrostatic Testing', results.ringConcrete.testing.design_force.toFixed(3), results.ringConcrete.testing.resistance.toFixed(3), results.ringConcrete.testing.status],
-                                    ['OBE Seismic', results.ringConcrete.obe.design_force.toFixed(3), results.ringConcrete.obe.resistance.toFixed(3), results.ringConcrete.obe.status],
-                                    ['SSE Seismic', results.ringConcrete.sse.design_force.toFixed(3), results.ringConcrete.sse.resistance.toFixed(3), results.ringConcrete.sse.status]
-                                ]),
-
-                                // Bottom Insulation - Center Part
-                                ...sectionTable("6. Bottom Insulation Verification - Center Part (Grade 800)",
-                                    ['Condition', 'Calc. Stress (MPa)', 'Allow. Stress (MPa)', 'SF', 'Status'],
-                                    Object.entries(results.insulation.centerPart).map(([key, val]) => [
-                                        key.charAt(0).toUpperCase() + key.slice(1),
-                                        val.calc_stress.toFixed(6),
-                                        val.allow_stress.toFixed(6),
-                                        String(val.safety_factor),
-                                        val.status
-                                    ])),
-
-                                // Bottom Insulation - Ring Part
-                                ...sectionTable("7. Bottom Insulation Verification - Ring Part (Grade 1600)",
-                                    ['Condition', 'Calc. Stress (MPa)', 'Allow. Stress (MPa)', 'SF', 'Status'],
-                                    Object.entries(results.insulation.ringPart).map(([key, val]) => [
-                                        key.charAt(0).toUpperCase() + key.slice(1),
-                                        val.calc_stress.toFixed(6),
-                                        val.allow_stress.toFixed(6),
-                                        String(val.safety_factor),
-                                        val.status
-                                    ])),
-
-                                // Watermark Notice at End of Document
-                                new Paragraph({
-                                    spacing: { before: 800, after: 200 },
-                                    border: {
-                                        top: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
-                                        bottom: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" }
-                                    },
-                                    children: []
-                                }),
-                                new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    spacing: { before: 400, after: 400 },
-                                    children: [
-                                        new TextRun({
-                                            text: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                                            size: 18,
-                                            color: "CCCCCC"
-                                        })
-                                    ]
-                                }),
-                                new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    spacing: { after: 200 },
-                                    children: [
-                                        new TextRun({
-                                            text: "DEVELOPED BY : AY",
-                                            bold: true,
-                                            size: 20,
-                                            color: "666666"
-                                        })
-                                    ]
-                                }),
-                                new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    spacing: { after: 400 },
-                                    children: [
-                                        new TextRun({
-                                            text: "This document and all its contents are protected.",
-                                            italics: true,
-                                            size: 16,
-                                            color: "999999"
-                                        })
-                                    ]
-                                }),
-                                new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    children: [
-                                        new TextRun({
-                                            text: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                                            size: 18,
-                                            color: "CCCCCC"
-                                        })
-                                    ]
-                                })
-                            ]
-                        }]
-                    });
-                    
-                    const blob = await Packer.toBlob(doc);
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `Bottom_Insulation_Calculation_Report_${Date.now()}.docx`;
-                    a.click();
-                } catch (error) {
-                    console.error('Word export error:', error);
-                    alert('Error exporting to Word: ' + (error && error.message ? error.message : error));
-                } finally {
-                    setExporting(false);
-                }
-            };
-
-            return (
-                <div className="container">
-                    <div className="header">
-                        <h1>⚡ BOTTOM INSULATION CALCULATOR</h1>
-                        <p className="subtitle">LNG Tank Design Verification System</p>
-                    </div>
-
-                    <div className="tabs">
-                        <button className={`tab ${activeTab === 'inputs' ? 'active' : ''}`} onClick={() => setActiveTab('inputs')}>
-                            Input Parameters
-                        </button>
-                        <button className={`tab ${activeTab === 'static' ? 'active' : ''}`} onClick={() => setActiveTab('static')}>
-                            Static Pressure
-                        </button>
-                        <button className={`tab ${activeTab === 'dynamic' ? 'active' : ''}`} onClick={() => setActiveTab('dynamic')}>
-                            Dynamic Pressure
-                        </button>
-                        <button className={`tab ${activeTab === 'deadload' ? 'active' : ''}`} onClick={() => setActiveTab('deadload')}>
-                            Dead Load
-                        </button>
-                        <button className={`tab ${activeTab === 'lineload' ? 'active' : ''}`} onClick={() => setActiveTab('lineload')}>
-                            Line Load
-                        </button>
-                        <button className={`tab ${activeTab === 'concrete' ? 'active' : ''}`} onClick={() => setActiveTab('concrete')}>
-                            Ring Concrete
-                        </button>
-                        <button className={`tab ${activeTab === 'insulation' ? 'active' : ''}`} onClick={() => setActiveTab('insulation')}>
-                            Insulation
-                        </button>
-                        <button className={`tab ${activeTab === 'summary' ? 'active' : ''}`} onClick={() => setActiveTab('summary')}>
-                            Summary
-                        </button>
-                        <button className={`tab ${activeTab === 'formulas' ? 'active' : ''}`} onClick={() => setActiveTab('formulas')}>
-                            Formulas
-                        </button>
-                    </div>
-
-                    {activeTab === 'inputs' && (
-                        <>
-                            <div className="card">
-                                <div className="card-title">🔧 Material Properties</div>
-                                <div className="input-group">
-                                    <div className="input-field">
-                                        <label>Cellular Glass - Nominal Strength (Center)</label>
-                                        <input type="number" step="0.01" value={inputs.cellular_center_nominal} 
-                                               onChange={(e) => handleInputChange('cellular_center_nominal', e.target.value)} />
-                                        <span className="unit">MPa - Grade 800</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Cellular Glass - Nominal Strength (Ring)</label>
-                                        <input type="number" step="0.01" value={inputs.cellular_ring_nominal} 
-                                               onChange={(e) => handleInputChange('cellular_ring_nominal', e.target.value)} />
-                                        <span className="unit">MPa - Grade 1600</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">💧 Liquid Properties</div>
-                                <div className="input-group">
-                                    <div className="input-field">
-                                        <label>LNG Density</label>
-                                        <input type="number" step="0.1" value={inputs.lng_density} 
-                                               onChange={(e) => handleInputChange('lng_density', e.target.value)} />
-                                        <span className="unit">kg/m³</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Seawater Density</label>
-                                        <input type="number" step="1" value={inputs.seawater_density} 
-                                               onChange={(e) => handleInputChange('seawater_density', e.target.value)} />
-                                        <span className="unit">kg/m³</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Gravity Acceleration</label>
-                                        <input type="number" step="0.00001" value={inputs.gravity} 
-                                               onChange={(e) => handleInputChange('gravity', e.target.value)} />
-                                        <span className="unit">m/s²</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">📊 Liquid Levels</div>
-                                <div className="input-group">
-                                    <div className="input-field">
-                                        <label>Max Design Liquid Level (Operating)</label>
-                                        <input type="number" step="0.1" value={inputs.max_liquid_level} 
-                                               onChange={(e) => handleInputChange('max_liquid_level', e.target.value)} />
-                                        <span className="unit">m</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>High Liquid Level (OBE/SSE)</label>
-                                        <input type="number" step="0.1" value={inputs.high_liquid_level} 
-                                               onChange={(e) => handleInputChange('high_liquid_level', e.target.value)} />
-                                        <span className="unit">m</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Hydrostatic Test Level</label>
-                                        <input type="number" step="0.001" value={inputs.test_level} 
-                                               onChange={(e) => handleInputChange('test_level', e.target.value)} />
-                                        <span className="unit">m</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">🌀 Seismic Accelerations</div>
-                                <div className="input-group">
-                                    <div className="input-field">
-                                        <label>Impulsive LNG - Horizontal (αi) - OBE</label>
-                                        <input type="number" step="0.001" value={inputs.alpha_i_obe} 
-                                               onChange={(e) => handleInputChange('alpha_i_obe', e.target.value)} />
-                                        <span className="unit">G</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Impulsive LNG - Horizontal (αi) - SSE</label>
-                                        <input type="number" step="0.001" value={inputs.alpha_i_sse} 
-                                               onChange={(e) => handleInputChange('alpha_i_sse', e.target.value)} />
-                                        <span className="unit">G</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Impulsive LNG - Vertical (αvf) - OBE</label>
-                                        <input type="number" step="0.001" value={inputs.alpha_vf_obe} 
-                                               onChange={(e) => handleInputChange('alpha_vf_obe', e.target.value)} />
-                                        <span className="unit">G</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Impulsive LNG - Vertical (αvf) - SSE</label>
-                                        <input type="number" step="0.001" value={inputs.alpha_vf_sse} 
-                                               onChange={(e) => handleInputChange('alpha_vf_sse', e.target.value)} />
-                                        <span className="unit">G</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Convective LNG - Horizontal (αc) - OBE</label>
-                                        <input type="number" step="0.001" value={inputs.alpha_c_obe} 
-                                               onChange={(e) => handleInputChange('alpha_c_obe', e.target.value)} />
-                                        <span className="unit">G</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Convective LNG - Horizontal (αc) - SSE</label>
-                                        <input type="number" step="0.001" value={inputs.alpha_c_sse} 
-                                               onChange={(e) => handleInputChange('alpha_c_sse', e.target.value)} />
-                                        <span className="unit">G</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Outer Tank - Vertical (αvr) - OBE</label>
-                                        <input type="number" step="0.001" value={inputs.alpha_vr_obe} 
-                                               onChange={(e) => handleInputChange('alpha_vr_obe', e.target.value)} />
-                                        <span className="unit">G</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Outer Tank - Vertical (αvr) - SSE</label>
-                                        <input type="number" step="0.001" value={inputs.alpha_vr_sse} 
-                                               onChange={(e) => handleInputChange('alpha_vr_sse', e.target.value)} />
-                                        <span className="unit">G</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">🏗️ Inner Shell Loading</div>
-                                <div className="input-group">
-                                    <div className="input-field">
-                                        <label>Self-weight of Inner Shell & Stiffener</label>
-                                        <input type="number" step="1" value={inputs.shell_weight} 
-                                               onChange={(e) => handleInputChange('shell_weight', e.target.value)} />
-                                        <span className="unit">kg</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Tank Radius (R)</label>
-                                        <input type="number" step="0.1" value={inputs.tank_radius} 
-                                               onChange={(e) => handleInputChange('tank_radius', e.target.value)} />
-                                        <span className="unit">m</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Perlite Insulation Height</label>
-                                        <input type="number" step="0.1" value={inputs.perlite_height} 
-                                               onChange={(e) => handleInputChange('perlite_height', e.target.value)} />
-                                        <span className="unit">m</span>
-                                    </div>
-                                    <div className="input-field">
-                                        <label>Perlite Thickness</label>
-                                        <input type="number" step="0.01" value={inputs.perlite_thickness} 
-                                               onChange={(e) => handleInputChange('perlite_thickness', e.target.value)} />
-                                        <span className="unit">m</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    {activeTab === 'static' && results && (
-                        <div className="card">
-                            <div className="card-title">Static Liquid Pressure Calculations</div>
-                            <div className="result-grid">
-                                <div className="result-item">
-                                    <div className="result-label">P1-OPE (Operating)</div>
-                                    <div className="result-value">{results.staticPressure.p1_ope.toFixed(6)} MPa</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">P1-TEST (Testing)</div>
-                                    <div className="result-value">{results.staticPressure.p1_test.toFixed(6)} MPa</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">P1-SEIS (OBE & SSE)</div>
-                                    <div className="result-value">{results.staticPressure.p1_seis.toFixed(6)} MPa</div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'dynamic' && results && (
-                        <div className="card">
-                            <div className="card-title">Dynamic Liquid Pressure Calculations</div>
-                            <div className="result-grid">
-                                <div className="result-item">
-                                    <div className="result-label">Pv-OBE (Vertical Seismic)</div>
-                                    <div className="result-value">{results.dynamicPressure.pv_obe.toFixed(6)} MPa</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">P2-OBE (Total Dynamic)</div>
-                                    <div className="result-value">{results.dynamicPressure.p2_obe.toFixed(6)} MPa</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">Pv-SSE (Vertical Seismic)</div>
-                                    <div className="result-value">{results.dynamicPressure.pv_sse.toFixed(6)} MPa</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">P2-SSE (Total Dynamic)</div>
-                                    <div className="result-value">{results.dynamicPressure.p2_sse.toFixed(6)} MPa</div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'deadload' && results && (
-                        <div className="card">
-                            <div className="card-title">Dead Load Compressive Force</div>
-                            <div className="result-grid">
-                                <div className="result-item">
-                                    <div className="result-label">P3-OPE-R (Ring Part)</div>
-                                    <div className="result-value">{results.deadLoad.p3_ope_r.toFixed(6)} MPa</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">P3-OPE-C (Center Part)</div>
-                                    <div className="result-value">{results.deadLoad.p3_ope_c.toFixed(6)} MPa</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">P3-OBE-R (Ring - OBE)</div>
-                                    <div className="result-value">{results.deadLoad.p3_obe_r.toFixed(6)} MPa</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">P3-SSE-R (Ring - SSE)</div>
-                                    <div className="result-value">{results.deadLoad.p3_sse_r.toFixed(6)} MPa</div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'lineload' && results && (
-                        <div className="card">
-                            <div className="card-title">Line Load Along Inner Shell</div>
-                            <div className="result-grid">
-                                <div className="result-item">
-                                    <div className="result-label">WL-OPE (Operating)</div>
-                                    <div className="result-value">{results.lineLoad.wl_ope.toFixed(3)} N/mm</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">WL-TEST (Testing)</div>
-                                    <div className="result-value">{results.lineLoad.wl_test.toFixed(3)} N/mm</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">WL-OBE (OBE)</div>
-                                    <div className="result-value">{results.lineLoad.wl_obe.toFixed(3)} N/mm</div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">WL-SSE (SSE)</div>
-                                    <div className="result-value">{results.lineLoad.wl_sse.toFixed(3)} N/mm</div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'concrete' && results && (
-                        <div className="card">
-                            <div className="card-title">Ring Concrete Strength Verification</div>
-                            <table className="verification-table">
-                                <thead>
-                                    <tr>
-                                        <th>Load Condition</th>
-                                        <th>Design Force (N/mm)</th>
-                                        <th>Resistance (N/mm)</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Operating</td>
-                                        <td>{results.ringConcrete.operating.design_force.toFixed(3)}</td>
-                                        <td>{results.ringConcrete.operating.resistance.toFixed(3)}</td>
-                                        <td>
-                                            <span className={`status-badge status-${results.ringConcrete.operating.status.toLowerCase()}`}>
-                                                {results.ringConcrete.operating.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Testing</td>
-                                        <td>{results.ringConcrete.testing.design_force.toFixed(3)}</td>
-                                        <td>{results.ringConcrete.testing.resistance.toFixed(3)}</td>
-                                        <td>
-                                            <span className={`status-badge status-${results.ringConcrete.testing.status.toLowerCase()}`}>
-                                                {results.ringConcrete.testing.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>OBE</td>
-                                        <td>{results.ringConcrete.obe.design_force.toFixed(3)}</td>
-                                        <td>{results.ringConcrete.obe.resistance.toFixed(3)}</td>
-                                        <td>
-                                            <span className={`status-badge status-${results.ringConcrete.obe.status.toLowerCase()}`}>
-                                                {results.ringConcrete.obe.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>SSE</td>
-                                        <td>{results.ringConcrete.sse.design_force.toFixed(3)}</td>
-                                        <td>{results.ringConcrete.sse.resistance.toFixed(3)}</td>
-                                        <td>
-                                            <span className={`status-badge status-${results.ringConcrete.sse.status.toLowerCase()}`}>
-                                                {results.ringConcrete.sse.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-
-                    {activeTab === 'insulation' && results && (
-                        <>
-                            <div className="card">
-                                <div className="card-title">Center Part - Cellular Glass (Grade 800)</div>
-                                <table className="verification-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Load Condition</th>
-                                            <th>Calc. Stress (MPa)</th>
-                                            <th>Allow. Stress (MPa)</th>
-                                            <th>Safety Factor</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Object.entries(results.insulation.centerPart).map(([key, value]) => (
-                                            <tr key={key}>
-                                                <td style={{textTransform: 'capitalize'}}>{key}</td>
-                                                <td>{value.calc_stress.toFixed(6)}</td>
-                                                <td>{value.allow_stress.toFixed(6)}</td>
-                                                <td>{value.safety_factor}</td>
-                                                <td>
-                                                    <span className={`status-badge status-${value.status.toLowerCase()}`}>
-                                                        {value.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">Ring Part - Cellular Glass (Grade 1600)</div>
-                                <table className="verification-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Load Condition</th>
-                                            <th>Calc. Stress (MPa)</th>
-                                            <th>Allow. Stress (MPa)</th>
-                                            <th>Safety Factor</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Object.entries(results.insulation.ringPart).map(([key, value]) => (
-                                            <tr key={key}>
-                                                <td style={{textTransform: 'capitalize'}}>{key}</td>
-                                                <td>{value.calc_stress.toFixed(6)}</td>
-                                                <td>{value.allow_stress.toFixed(6)}</td>
-                                                <td>{value.safety_factor}</td>
-                                                <td>
-                                                    <span className={`status-badge status-${value.status.toLowerCase()}`}>
-                                                        {value.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </>
-                    )}
-
-                    {activeTab === 'formulas' && (
-                        <>
-                            <div className="card">
-                                <div className="card-title">📐 Calculation Formulas Reference</div>
-                                <p style={{color: 'var(--text-secondary)', marginBottom: '1rem'}}>
-                                    Note: These formulas are for reference only and will not be included in printed reports.
-                                </p>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">Static Liquid Pressure</div>
-                                <div className="formula-section">
-                                    {Object.entries(FORMULAS.staticPressure).map(([key, formula]) => (
-                                        <div key={key} className="formula-item">
-                                            <div className="formula-name">{key.toUpperCase()}</div>
-                                            <div className="formula-expression">{formula}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">Dynamic Liquid Pressure</div>
-                                <div className="formula-section">
-                                    {Object.entries(FORMULAS.dynamicPressure).map(([key, formula]) => (
-                                        <div key={key} className="formula-item">
-                                            <div className="formula-name">{key.toUpperCase()}</div>
-                                            <div className="formula-expression">{formula}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">Dead Load Pressure</div>
-                                <div className="formula-section">
-                                    {Object.entries(FORMULAS.deadLoad).map(([key, formula]) => (
-                                        <div key={key} className="formula-item">
-                                            <div className="formula-name">{key.toUpperCase()}</div>
-                                            <div className="formula-expression">{formula}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">Line Load</div>
-                                <div className="formula-section">
-                                    {Object.entries(FORMULAS.lineLoad).map(([key, formula]) => (
-                                        <div key={key} className="formula-item">
-                                            <div className="formula-name">{key.toUpperCase()}</div>
-                                            <div className="formula-expression">{formula}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">Ring Concrete Verification</div>
-                                <div className="formula-section">
-                                    {Object.entries(FORMULAS.ringConcrete).map(([key, formula]) => (
-                                        <div key={key} className="formula-item">
-                                            <div className="formula-name">{key.toUpperCase()}</div>
-                                            <div className="formula-expression">{formula}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="card">
-                                <div className="card-title">Bottom Insulation Verification</div>
-                                <div className="formula-section">
-                                    {Object.entries(FORMULAS.insulation).map(([key, formula]) => (
-                                        <div key={key} className="formula-item">
-                                            <div className="formula-name">{key.replace(/_/g, ' ').toUpperCase()}</div>
-                                            <div className="formula-expression">{formula}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    {activeTab === 'summary' && results && (
-                        <div className="summary-card">
-                            <div className="card-title" style={{fontSize: '1.5rem', marginBottom: '2rem'}}>
-                                📋 Calculation Summary
-                            </div>
-                            
-                            <div className="summary-status" style={{
-                                color: results.summary.overallStatus === 'ALL VERIFICATIONS PASSED' ? 'var(--success)' : 'var(--danger)'
-                            }}>
-                                {results.summary.overallStatus}
-                            </div>
-
-                            <div className="result-grid" style={{marginTop: '2rem'}}>
-                                <div className="result-item">
-                                    <div className="result-label">Ring Concrete Verification</div>
-                                    <div className="result-value">
-                                        <span className={`status-badge status-${results.summary.ringConcreteStatus === 'PASSED' ? 'ok' : 'ng'}`}>
-                                            {results.summary.ringConcreteStatus}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">Center Part Verification</div>
-                                    <div className="result-value">
-                                        <span className={`status-badge status-${results.summary.centerPartStatus === 'PASSED' ? 'ok' : 'ng'}`}>
-                                            {results.summary.centerPartStatus}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="result-item">
-                                    <div className="result-label">Ring Part Verification</div>
-                                    <div className="result-value">
-                                        <span className={`status-badge status-${results.summary.ringPartStatus === 'PASSED' ? 'ok' : 'ng'}`}>
-                                            {results.summary.ringPartStatus}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="card" style={{marginTop: '2rem', background: 'var(--bg-secondary)'}}>
-                                <div className="card-title">Key Design Values</div>
-                                <div className="result-grid">
-                                    <div className="result-item">
-                                        <div className="result-label">Max Operating Stress - Center</div>
-                                        <div className="result-value">{results.summary.maxOperatingStressCenter.toFixed(6)} MPa</div>
-                                    </div>
-                                    <div className="result-item">
-                                        <div className="result-label">Max Operating Stress - Ring</div>
-                                        <div className="result-value">{results.summary.maxOperatingStressRing.toFixed(6)} MPa</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="export-buttons">
-                                <button className="export-btn" onClick={exportToPDF} disabled={exporting}>
-                                    📄 {exporting ? 'Exporting...' : 'Export to PDF'}
-                                </button>
-                                <button className="export-btn" onClick={exportToWord} disabled={exporting}>
-                                    📝 {exporting ? 'Exporting...' : 'Export to Word'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
-        ReactDOM.render(<App />, document.getElementById('root'));
-    </script>
-
-    <!-- Permanent Watermark - DO NOT MODIFY -->
-    <div class="watermark" id="watermark-ay">Developed by : AY</div>
-    
-    <script>
-        // Watermark Protection - This code ensures the watermark cannot be removed or modified
-        (function() {
-            'use strict';
-            
-            const watermarkText = 'Developed by : AY';
-            const watermarkId = 'watermark-ay';
-            
-            // Function to restore watermark if tampered with
-            function protectWatermark() {
-                let wm = document.getElementById(watermarkId);
-                if (!wm) {
-                    wm = document.createElement('div');
-                    wm.id = watermarkId;
-                    wm.className = 'watermark';
-                    document.body.appendChild(wm);
-                }
-                if (wm.textContent !== watermarkText) {
-                    wm.textContent = watermarkText;
-                }
-                if (wm.style.display === 'none' || wm.style.visibility === 'hidden') {
-                    wm.style.display = '';
-                    wm.style.visibility = '';
-                }
-            }
-            
-            // Initial protection
-            protectWatermark();
-            
-            // Continuous monitoring
-            setInterval(protectWatermark, 100);
-            
-            // Observe DOM mutations
-            const observer = new MutationObserver(protectWatermark);
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true,
-                characterData: true,
-                attributes: true
-            });
-            
-            // Prevent console manipulation
-            Object.defineProperty(window, watermarkId, {
-                value: watermarkText,
-                writable: false,
-                configurable: false
-            });
-            
-            // Make watermark restoration on load
-            window.addEventListener('load', protectWatermark);
-            document.addEventListener('DOMContentLoaded', protectWatermark);
-        })();
-    </script>
+<div class="wrap">
+
+<header class="top no-print">
+  <div class="brand">
+    <div class="kick">LNG Tank Design Verification System</div>
+    <h1>Bottom Insulation <span>Calculator</span></h1>
+    <div class="sub">Cellular-glass bottom insulation stress verification &amp; ring-concrete bearing check &mdash; operating, testing, OBE and SSE load cases.</div>
+  </div>
+  <div class="top-actions">
+    <button class="btn" id="resetBtn">Reset</button>
+    <button class="btn" id="wordBtn">Export Word</button>
+    <button class="btn" id="pdfFormulaBtn">Export PDF + Formulae</button>
+    <button class="btn primary" id="printBtn">Print / PDF</button>
+  </div>
+</header>
+
+<div class="legend no-print">
+  <span class="lg-item"><span class="lg-swatch sw-input"></span> Editable input</span>
+  <span class="lg-item"><span class="lg-swatch sw-calc"></span> Calculated</span>
+  <span class="lg-item"><span class="lg-swatch sw-ok"></span> OK / Pass</span>
+  <span class="lg-item"><span class="lg-swatch sw-bad"></span> NG / Fail</span>
+</div>
+
+<div id="screenContent">
+<nav class="tabs no-print" id="tabBar">
+  <button class="tab-btn active" data-tab="inputs"><span class="tnum">1</span> Inputs</button>
+  <button class="tab-btn" data-tab="static"><span class="tnum">2</span> Static Pressure</button>
+  <button class="tab-btn" data-tab="dynamic"><span class="tnum">3</span> Dynamic Pressure</button>
+  <button class="tab-btn" data-tab="deadload"><span class="tnum">4</span> Dead Load</button>
+  <button class="tab-btn" data-tab="lineload"><span class="tnum">5</span> Line Load</button>
+  <button class="tab-btn" data-tab="concrete"><span class="tnum">6</span> Ring Concrete</button>
+  <button class="tab-btn" data-tab="insulation"><span class="tnum">7</span> Insulation</button>
+  <button class="tab-btn" data-tab="summary"><span class="tnum">8</span> Summary</button>
+  <button class="tab-btn" data-tab="formulas"><span class="tnum">9</span> Formulae</button>
+</nav>
+
+<section class="tab-panel active" id="tab-inputs">
+  <div class="card"><h2><span class="num">1</span> Design Inputs</h2>
+    <div class="body" id="generalInputs"></div>
+  </div>
+</section>
+
+<section class="tab-panel" id="tab-static">
+  <div class="card"><h2><span class="num">2</span> Static Liquid Pressure</h2>
+    <div class="body"><div class="kv" id="staticKv"></div>
+      <div class="formula">
+        <span class="fname">P1-OPE</span> = &rho;<sub>E</sub> &middot; g &middot; h<sub>M</sub> &middot; 10<sup>&minus;6</sup> &nbsp;&bull;&nbsp;
+        <span class="fname">P1-TEST</span> = &rho;<sub>W</sub> &middot; g &middot; h<sub>t</sub> &middot; 10<sup>&minus;6</sup> &nbsp;&bull;&nbsp;
+        <span class="fname">P1-SEIS</span> = &rho;<sub>E</sub> &middot; g &middot; h<sub>s</sub> &middot; 10<sup>&minus;6</sup><br>
+        <b>&rho;</b> density (kg/m&sup3;), <b>g</b> gravity, <b>h</b> liquid level (mm) &rarr; pressure in MPa.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tab-panel" id="tab-dynamic">
+  <div class="card"><h2><span class="num">3</span> Dynamic (Seismic) Liquid Pressure</h2>
+    <div class="body"><div class="kv" id="dynamicKv"></div>
+      <div class="formula">
+        <span class="fname">Pv</span> = &radic;(P<sub>v,c1</sub>&sup2; + P<sub>v,c2</sub>&sup2;) &nbsp;&bull;&nbsp;
+        <span class="fname">P2</span> = P<sub>h</sub> + P<sub>v</sub> + P<sub>s</sub> &nbsp;(SRSS of vertical components, then sum of horizontal + vertical + sloshing).
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tab-panel" id="tab-deadload">
+  <div class="card"><h2><span class="num">4</span> Dead Load Compressive Force</h2>
+    <div class="body"><div class="kv" id="deadKv"></div>
+      <div class="formula">
+        <span class="fname">w</span> = thickness &middot; density &middot; g &middot; 10<sup>&minus;6</sup> &nbsp;&bull;&nbsp;
+        <span class="fname">P3-R</span> = w<sub>A</sub>+w<sub>R</sub>+w<sub>TA</sub>+w<sub>L</sub> (ring) &nbsp;&bull;&nbsp;
+        <span class="fname">P3-C</span> = w<sub>I</sub>+w<sub>L1</sub>+w<sub>TB</sub>+w<sub>L2</sub> (center)<br>
+        Seismic: <span class="fname">P3-OBE/SSE</span> = (1 + &alpha;<sub>vr</sub>&middot;0.3) &middot; P3-OPE.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tab-panel" id="tab-lineload">
+  <div class="card"><h2><span class="num">5</span> Line Load Along Inner Shell</h2>
+    <div class="body"><div class="kv" id="lineKv"></div>
+      <div class="formula">
+        <span class="fname">w<sub>s</sub></span> = W&middot;g / (2&pi;R) / 1000 &nbsp;&bull;&nbsp;
+        <span class="fname">w<sub>p</sub></span> = (&rho;&middot;9.80665&middot;t/2)&middot;[H &minus; (t/(2&mu;kH))&middot;(1&minus;e<sup>&minus;2&mu;kH/t</sup>)] / 1000<br>
+        <span class="fname">W<sub>L,seis</sub></span> = w<sub>s</sub> + w<sub>p</sub> + 0.3&middot;&alpha;<sub>vf</sub>&middot;(w<sub>s</sub>+w<sub>p</sub>) + 4M/(&pi;R&sup2;&middot;4&middot;10<sup>6</sup>).
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tab-panel" id="tab-concrete">
+  <div class="card"><h2><span class="num">6</span> Ring Concrete Bearing Verification</h2>
+    <div class="body">
+      <div class="tablewrap"><table id="concTable">
+        <thead><tr><th class="lcol">Load case</th><th>Design force 1.35&middot;W<sub>L</sub> (N/mm)</th><th>Resistance F<sub>Rdu</sub> (N/mm)</th><th>Status</th></tr></thead>
+        <tbody id="concBody"></tbody>
+      </table></div>
+      <div class="formula">
+        <span class="fname">b1</span> = t<sub>shell</sub> + 2&middot;l<sub>weld</sub> + 2&middot;t<sub>annular</sub> &nbsp;&bull;&nbsp; <span class="fname">b2</span> = 3&middot;b1 &nbsp;&bull;&nbsp;
+        <span class="fname">f<sub>cd</sub></span> = &alpha;<sub>cc</sub>&middot;f<sub>ck</sub>/&gamma;<sub>c</sub> &nbsp;&bull;&nbsp;
+        <span class="fname">F<sub>Rdu</sub></span> = A<sub>c0</sub>&middot;f<sub>cd</sub>&middot;&radic;(A<sub>c1</sub>/A<sub>c0</sub>). Design force uses load factor 1.35.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tab-panel" id="tab-insulation">
+  <div class="stack">
+    <div class="card"><h2><span class="num">7</span> Bottom Insulation &mdash; Center Part (Grade 800)</h2>
+      <div class="body"><div class="tablewrap"><table id="centerTable">
+        <thead><tr><th class="lcol">Load case</th><th>Calc. stress (MPa)</th><th>Allow. stress (MPa)</th><th>S.F.</th><th>Status</th></tr></thead>
+        <tbody id="centerBody"></tbody>
+      </table></div></div>
+    </div>
+    <div class="card"><h2><span class="num">7</span> Bottom Insulation &mdash; Ring Part (Grade 1600)</h2>
+      <div class="body"><div class="tablewrap"><table id="ringTable">
+        <thead><tr><th class="lcol">Load case</th><th>Calc. stress (MPa)</th><th>Allow. stress (MPa)</th><th>S.F.</th><th>Status</th></tr></thead>
+        <tbody id="ringBody"></tbody>
+      </table></div>
+      <div class="formula">
+        <span class="fname">Center</span> &sigma; = P1 + P3-C + P<sub>g</sub> (seismic adds P2) &nbsp;&bull;&nbsp;
+        <span class="fname">Ring</span> &sigma; = P1 + P3-R + P<sub>g</sub> + P5 (seismic adds P2).
+        Allowable = nominal strength / safety factor (3 / 2.25 / 2 / 1.5 for OPE / TEST / OBE / SSE).
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section class="tab-panel" id="tab-summary">
+  <div id="summaryBanner"></div>
+  <div class="card"><h2><span class="num">8</span> Verification Summary</h2>
+    <div class="body"><div class="kv" id="summaryKv"></div></div>
+  </div>
+</section>
+
+<section class="tab-panel" id="tab-formulas">
+  <div class="card"><h2><span class="num">9</span> Formulae Reference</h2>
+    <div class="body" id="formulaBody"></div>
+  </div>
+</section>
+</div><!-- /screenContent -->
+
+<div id="printReport"></div>
+
+<div id="devCredit">Developed by: AY</div>
+</div><!-- /wrap -->
+<script>
+"use strict";
+var PI = Math.PI;
+
+var DEFAULTS = {
+  cellular_center_nominal:0.8, cellular_center_minimum:0.55,
+  cellular_ring_nominal:1.6,   cellular_ring_minimum:1.1,
+  lng_density:470.2, seawater_density:1020, gravity:9.80665,
+  max_liquid_level:34.6, high_liquid_level:34, test_level:19.938,
+  gas_pressure:0.029,
+  alpha_i_obe:0.186, alpha_vf_obe:0.144, alpha_c_obe:0.008, alpha_vr_obe:0.088,
+  alpha_i_sse:0.28,  alpha_vf_sse:0.214, alpha_c_sse:0.016, alpha_vr_sse:0.166,
+  inner_annular_thickness:0.0113, inner_annular_density:7850,
+  ring_concrete_thickness:0.15,   ring_concrete_density:2500,
+  tcp_annular_thickness:0.008,    tcp_annular_density:7850,
+  leveling_ring_thickness:0.05,   leveling_ring_density:2345,
+  inner_bottom_thickness:0.005,   inner_bottom_density:7850,
+  leveling_upper_thickness:0.153, leveling_upper_density:2345,
+  tcp_bottom_thickness:0.005,     tcp_bottom_density:7850,
+  leveling_lower_thickness:0.05,  leveling_lower_density:2345,
+  shell_thickness:24.9, weld_length:9, annular_thickness:11.3,
+  concrete_strength:40, safety_factor_normal:1.5, safety_factor_sse:1.2, coef_acc:1,
+  shell_weight:1256050, perlite_height:35.1, perlite_density:65, perlite_thickness:1.08,
+  friction_coef:0.4142, pressure_ratio:0.3333, tank_radius:43,
+  moment_obe:1197779000000, moment_sse:1282083000000,
+  ph_obe:0.02317, pv_obe_comp1:0.004242, pv_obe_comp2:0.005632, ps_obe:0.00059,
+  ph_sse:0.0233,  pv_sse_comp1:0.007842, pv_sse_comp2:0.008312, ps_sse:0.00118,
+  p5_operating:0.1108, p5_testing:0.0896, p5_obe:0.5064, p5_sse:0.5372
+};
+
+var S = JSON.parse(JSON.stringify(DEFAULTS));
+
+/* ---------- ENGINE (ported verbatim) ---------- */
+function staticLiquidPressure(){
+  return {
+    p1_ope:  (S.lng_density*S.gravity*S.max_liquid_level)/1e6,
+    p1_test: (S.seawater_density*S.gravity*S.test_level)/1e6,
+    p1_seis: (S.lng_density*S.gravity*S.high_liquid_level)/1e6
+  };
+}
+function dynamicLiquidPressure(){
+  var pv_obe=Math.sqrt(Math.pow(S.pv_obe_comp1,2)+Math.pow(S.pv_obe_comp2,2));
+  var pv_sse=Math.sqrt(Math.pow(S.pv_sse_comp1,2)+Math.pow(S.pv_sse_comp2,2));
+  return { pv_obe:pv_obe, pv_sse:pv_sse,
+    p2_obe:S.ph_obe+pv_obe+S.ps_obe, p2_sse:S.ph_sse+pv_sse+S.ps_sse };
+}
+function deadLoadPressure(){
+  var wA=(S.inner_annular_thickness*S.inner_annular_density*S.gravity)/1e6;
+  var wR=(S.ring_concrete_thickness*S.ring_concrete_density*S.gravity)/1e6;
+  var wTA=(S.tcp_annular_thickness*S.tcp_annular_density*S.gravity)/1e6;
+  var wL=(S.leveling_ring_thickness*S.leveling_ring_density*S.gravity)/1e6;
+  var p3_ope_r=wA+wR+wTA+wL, p3_ope_rc=wA;
+  var wI=(S.inner_bottom_thickness*S.inner_bottom_density*S.gravity)/1e6;
+  var wL1=(S.leveling_upper_thickness*S.leveling_upper_density*S.gravity)/1e6;
+  var wTB=(S.tcp_bottom_thickness*S.tcp_bottom_density*S.gravity)/1e6;
+  var wL2=(S.leveling_lower_thickness*S.leveling_lower_density*S.gravity)/1e6;
+  var p3_ope_c=wI+wL1+wTB+wL2;
+  return {
+    wA:wA,wR:wR,wTA:wTA,wL:wL,wI:wI,wL1:wL1,wTB:wTB,wL2:wL2,
+    p3_ope_r:p3_ope_r, p3_ope_rc:p3_ope_rc, p3_ope_c:p3_ope_c,
+    p3_obe_r:(1+S.alpha_vr_obe*0.3)*p3_ope_r, p3_obe_rc:(1+S.alpha_vr_obe*0.3)*p3_ope_rc, p3_obe_c:(1+S.alpha_vr_obe*0.3)*p3_ope_c,
+    p3_sse_r:(1+S.alpha_vr_sse*0.3)*p3_ope_r, p3_sse_rc:(1+S.alpha_vr_sse*0.3)*p3_ope_rc, p3_sse_c:(1+S.alpha_vr_sse*0.3)*p3_ope_c
+  };
+}
+function lineLoad(){
+  var ws=(S.shell_weight*S.gravity)/(2*PI*S.tank_radius)/1000;
+  var exp_term=Math.exp(-2*S.friction_coef*S.pressure_ratio*S.perlite_height/S.perlite_thickness);
+  var wp=(S.perlite_density*9.80665*S.perlite_thickness/2)*
+         (S.perlite_height-(S.perlite_thickness/(2*S.friction_coef*S.pressure_ratio*S.perlite_height))*(1-exp_term))/1000;
+  var wl_ope=ws+wp, wl_test=ws;
+  var wv_obe=0.3*S.alpha_vf_obe*wl_ope, wm_obe=(4*S.moment_obe)/(PI*Math.pow(S.tank_radius,2)*4*1e6);
+  var wl_obe=ws+wp+wv_obe+wm_obe;
+  var wv_sse=0.3*S.alpha_vf_sse*wl_ope, wm_sse=(4*S.moment_sse)/(PI*Math.pow(S.tank_radius,2)*4*1e6);
+  var wl_sse=ws+wp+wv_sse+wm_sse;
+  return {ws:ws,wp:wp,wl_ope:wl_ope,wl_test:wl_test,wl_obe:wl_obe,wl_sse:wl_sse};
+}
+function ringConcrete(){
+  var L=lineLoad();
+  var b1=S.shell_thickness+2*S.weld_length+S.annular_thickness*2, b2=3*b1, ac0=b1, ac1=b2;
+  var fcd_normal=S.coef_acc*S.concrete_strength/S.safety_factor_normal;
+  var fcd_sse=S.coef_acc*S.concrete_strength/S.safety_factor_sse;
+  var frdu_normal=ac0*fcd_normal*Math.sqrt(ac1/ac0);
+  var frdu_sse=ac0*fcd_sse*Math.sqrt(ac1/ac0);
+  var lf=1.35;
+  function row(wl,res){return {design_force:lf*wl,resistance:res,status:(lf*wl)<res?'OK':'NG'};}
+  return {
+    operating:row(L.wl_ope,frdu_normal),
+    testing:  row(L.wl_test,frdu_normal),
+    obe:      row(L.wl_obe,frdu_normal),
+    sse:      row(L.wl_sse,frdu_sse),
+    b1:b1,b2:b2,fcd_normal:fcd_normal,fcd_sse:fcd_sse,frdu_normal:frdu_normal,frdu_sse:frdu_sse
+  };
+}
+function insulation(){
+  var sp=staticLiquidPressure(), dp=dynamicLiquidPressure(), dl=deadLoadPressure();
+  var center={
+    operating:{calc_stress:sp.p1_ope+dl.p3_ope_c+S.gas_pressure, allow_stress:S.cellular_center_nominal/3, safety_factor:3},
+    testing:  {calc_stress:sp.p1_test+dl.p3_ope_c,               allow_stress:S.cellular_center_nominal/2.25, safety_factor:2.25},
+    obe:      {calc_stress:sp.p1_seis+dp.p2_obe+dl.p3_obe_c+S.gas_pressure, allow_stress:S.cellular_center_nominal/2, safety_factor:2},
+    sse:      {calc_stress:sp.p1_seis+dp.p2_sse+dl.p3_sse_c+S.gas_pressure, allow_stress:S.cellular_center_nominal/1.5, safety_factor:1.5}
+  };
+  Object.keys(center).forEach(function(k){center[k].status=center[k].calc_stress<center[k].allow_stress?'OK':'NG';});
+  var ring={
+    operating:{calc_stress:sp.p1_ope+dl.p3_ope_r+S.gas_pressure+S.p5_operating, allow_stress:S.cellular_ring_nominal/3, safety_factor:3},
+    testing:  {calc_stress:sp.p1_test+dl.p3_ope_r+S.p5_testing,                 allow_stress:S.cellular_ring_nominal/2.25, safety_factor:2.25},
+    obe:      {calc_stress:sp.p1_seis+dp.p2_obe+dl.p3_obe_r+S.gas_pressure+S.p5_obe, allow_stress:S.cellular_ring_nominal/2, safety_factor:2},
+    sse:      {calc_stress:sp.p1_seis+dp.p2_sse+dl.p3_sse_r+S.gas_pressure+S.p5_sse, allow_stress:S.cellular_ring_nominal/1.5, safety_factor:1.5}
+  };
+  Object.keys(ring).forEach(function(k){ring[k].status=ring[k].calc_stress<ring[k].allow_stress?'OK':'NG';});
+  return {centerPart:center, ringPart:ring};
+}
+function summary(){
+  var rc=ringConcrete(), ins=insulation();
+  var rcOK=['operating','testing','obe','sse'].every(function(k){return rc[k].status==='OK';});
+  var cOK=Object.keys(ins.centerPart).every(function(k){return ins.centerPart[k].status==='OK';});
+  var rOK=Object.keys(ins.ringPart).every(function(k){return ins.ringPart[k].status==='OK';});
+  return {
+    ringConcreteStatus: rcOK?'PASSED':'FAILED',
+    centerPartStatus:   cOK?'PASSED':'FAILED',
+    ringPartStatus:     rOK?'PASSED':'FAILED',
+    overall: (rcOK&&cOK&&rOK),
+    maxOpCenter: ins.centerPart.operating.calc_stress,
+    maxOpRing:   ins.ringPart.operating.calc_stress
+  };
+}
+
+/* ---------- HELPERS ---------- */
+function $(id){return document.getElementById(id);}
+function fmt(x,d){ if(x===undefined||x===null||isNaN(x))return '\u2013'; d=(d===undefined)?4:d; return Number(x).toFixed(d);}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function chip(st){return '<span class="check '+(st==='OK'?'ok':'bad')+'">'+st+'</span>';}
+
+/* ---------- INPUT FORM ---------- */
+var GEN_FIELDS = [
+ ["sec","Material Properties (Cellular Glass)"],
+ ["cellular_center_nominal","Nominal strength \u2013 Center (Grade 800)","MPa"],
+ ["cellular_ring_nominal","Nominal strength \u2013 Ring (Grade 1600)","MPa"],
+ ["gas_pressure","Gas pressure (P_g)","MPa"],
+ ["sec","Liquid Properties"],
+ ["lng_density","LNG density","kg/m\u00b3"],
+ ["seawater_density","Seawater density","kg/m\u00b3"],
+ ["gravity","Gravity acceleration","m/s\u00b2"],
+ ["sec","Liquid Levels"],
+ ["max_liquid_level","Max design liquid level (operating)","m"],
+ ["high_liquid_level","High liquid level (OBE/SSE)","m"],
+ ["test_level","Hydrostatic test level","m"],
+ ["sec","Seismic Accelerations (G)"],
+ ["alpha_i_obe","Impulsive horizontal \u03b1i \u2013 OBE","G"],
+ ["alpha_i_sse","Impulsive horizontal \u03b1i \u2013 SSE","G"],
+ ["alpha_vf_obe","Impulsive vertical \u03b1vf \u2013 OBE","G"],
+ ["alpha_vf_sse","Impulsive vertical \u03b1vf \u2013 SSE","G"],
+ ["alpha_c_obe","Convective horizontal \u03b1c \u2013 OBE","G"],
+ ["alpha_c_sse","Convective horizontal \u03b1c \u2013 SSE","G"],
+ ["alpha_vr_obe","Outer tank vertical \u03b1vr \u2013 OBE","G"],
+ ["alpha_vr_sse","Outer tank vertical \u03b1vr \u2013 SSE","G"],
+ ["sec","Tank Geometry & Inner Shell"],
+ ["tank_radius","Tank radius (R)","m"],
+ ["shell_weight","Self-weight of inner shell & stiffener","kg"],
+ ["perlite_height","Perlite insulation height","m"],
+ ["perlite_thickness","Perlite thickness","m"],
+ ["perlite_density","Perlite density","kg/m\u00b3"],
+ ["friction_coef","Friction coefficient (\u03bc)","\u2013"],
+ ["pressure_ratio","Pressure ratio (k)","\u2013"],
+ ["moment_obe","Overturning moment \u2013 OBE","N\u00b7mm"],
+ ["moment_sse","Overturning moment \u2013 SSE","N\u00b7mm"],
+ ["sec","Dynamic Pressure Components (MPa)"],
+ ["ph_obe","Ph \u2013 OBE","MPa"],
+ ["pv_obe_comp1","Pv comp.1 \u2013 OBE","MPa"],
+ ["pv_obe_comp2","Pv comp.2 \u2013 OBE","MPa"],
+ ["ps_obe","Ps (sloshing) \u2013 OBE","MPa"],
+ ["ph_sse","Ph \u2013 SSE","MPa"],
+ ["pv_sse_comp1","Pv comp.1 \u2013 SSE","MPa"],
+ ["pv_sse_comp2","Pv comp.2 \u2013 SSE","MPa"],
+ ["ps_sse","Ps (sloshing) \u2013 SSE","MPa"],
+ ["sec","FEM Local Pressure P5 (MPa)"],
+ ["p5_operating","P5 \u2013 Operating","MPa"],
+ ["p5_testing","P5 \u2013 Testing","MPa"],
+ ["p5_obe","P5 \u2013 OBE","MPa"],
+ ["p5_sse","P5 \u2013 SSE","MPa"],
+ ["sec","Dead Load \u2013 Ring Part (thickness m / density kg/m\u00b3)"],
+ ["inner_annular_thickness","Inner annular plate \u2013 thk","m"],
+ ["inner_annular_density","Inner annular plate \u2013 \u03c1","kg/m\u00b3"],
+ ["ring_concrete_thickness","Ring concrete \u2013 thk","m"],
+ ["ring_concrete_density","Ring concrete \u2013 \u03c1","kg/m\u00b3"],
+ ["tcp_annular_thickness","TCP annular plate \u2013 thk","m"],
+ ["tcp_annular_density","TCP annular plate \u2013 \u03c1","kg/m\u00b3"],
+ ["leveling_ring_thickness","Leveling ring \u2013 thk","m"],
+ ["leveling_ring_density","Leveling ring \u2013 \u03c1","kg/m\u00b3"],
+ ["sec","Dead Load \u2013 Center Part (thickness m / density kg/m\u00b3)"],
+ ["inner_bottom_thickness","Inner bottom plate \u2013 thk","m"],
+ ["inner_bottom_density","Inner bottom plate \u2013 \u03c1","kg/m\u00b3"],
+ ["leveling_upper_thickness","Leveling concrete (upper) \u2013 thk","m"],
+ ["leveling_upper_density","Leveling concrete (upper) \u2013 \u03c1","kg/m\u00b3"],
+ ["tcp_bottom_thickness","TCP bottom plate \u2013 thk","m"],
+ ["tcp_bottom_density","TCP bottom plate \u2013 \u03c1","kg/m\u00b3"],
+ ["leveling_lower_thickness","Leveling concrete (lower) \u2013 thk","m"],
+ ["leveling_lower_density","Leveling concrete (lower) \u2013 \u03c1","kg/m\u00b3"],
+ ["sec","Ring Concrete Bearing Properties"],
+ ["shell_thickness","Shell thickness","mm"],
+ ["weld_length","Weld length","mm"],
+ ["annular_thickness","Annular thickness","mm"],
+ ["concrete_strength","Concrete strength f_ck","MPa"],
+ ["safety_factor_normal","Safety factor \u03b3c (normal)","\u2013"],
+ ["safety_factor_sse","Safety factor \u03b3c (SSE)","\u2013"],
+ ["coef_acc","Coefficient \u03b1cc","\u2013"]
+];
+
+function buildInputs(){
+  var host=$("generalInputs"); host.innerHTML=""; var grid=null;
+  GEN_FIELDS.forEach(function(f){
+    if(f[0]==="sec"){
+      var d=document.createElement("div"); d.className="section-label"; d.textContent=f[1]; host.appendChild(d);
+      grid=document.createElement("div"); grid.className="field-grid"; host.appendChild(grid); return;
+    }
+    var key=f[0], label=f[1], unit=f[2];
+    var wrap=document.createElement("div"); wrap.className="field";
+    var lab=document.createElement("label"); lab.textContent=label; lab.title=label; wrap.appendChild(lab);
+    var row=document.createElement("div"); row.className="input-row";
+    var inp=document.createElement("input"); inp.type="text"; inp.setAttribute("inputmode","decimal");
+    inp.value=S[key];
+    inp.addEventListener("input",function(){ var v=parseFloat(inp.value); S[key]=isNaN(v)?0:v; computeAndRender(); });
+    row.appendChild(inp);
+    if(unit){ var u=document.createElement("span"); u.className="unit"; u.textContent=unit; row.appendChild(u); }
+    wrap.appendChild(row); grid.appendChild(wrap);
+  });
+}
+
+/* ---------- KV / TABLE RENDERERS ---------- */
+function kv(rows){
+  return rows.map(function(r){
+    if(r.note) return '<div class="note">'+r.note+'</div>';
+    return '<div class="lbl">'+r[0]+'</div><div class="val">'+r[1]+'</div><div class="u">'+(r[2]||'')+'</div>';
+  }).join("");
+}
+var CASES=[["operating","Operating"],["testing","Testing"],["obe","OBE"],["sse","SSE"]];
+
+function computeAndRender(){
+  var sp=staticLiquidPressure(), dp=dynamicLiquidPressure(), dl=deadLoadPressure(),
+      ll=lineLoad(), rc=ringConcrete(), ins=insulation(), sm=summary();
+
+  $("staticKv").innerHTML=kv([
+    {note:"Hydrostatic pressure at tank bottom for each load condition."},
+    ["P1-OPE (Operating)",fmt(sp.p1_ope),"MPa"],
+    ["P1-TEST (Testing)",fmt(sp.p1_test),"MPa"],
+    ["P1-SEIS (OBE & SSE)",fmt(sp.p1_seis),"MPa"]
+  ]);
+  $("dynamicKv").innerHTML=kv([
+    {note:"Seismic liquid pressure (impulsive + convective + vertical)."},
+    ["Pv-OBE (vertical seismic, SRSS)",fmt(dp.pv_obe),"MPa"],
+    ["P2-OBE (total dynamic)",fmt(dp.p2_obe),"MPa"],
+    ["Pv-SSE (vertical seismic, SRSS)",fmt(dp.pv_sse),"MPa"],
+    ["P2-SSE (total dynamic)",fmt(dp.p2_sse),"MPa"]
+  ]);
+  $("deadKv").innerHTML=kv([
+    {note:"Self-weight compressive pressure of plates / concrete layers."},
+    ["P3-OPE-R (ring, operating)",fmt(dl.p3_ope_r),"MPa"],
+    ["P3-OPE-C (center, operating)",fmt(dl.p3_ope_c),"MPa"],
+    ["P3-OBE-R (ring, OBE)",fmt(dl.p3_obe_r),"MPa"],
+    ["P3-SSE-R (ring, SSE)",fmt(dl.p3_sse_r),"MPa"],
+    ["P3-OBE-C (center, OBE)",fmt(dl.p3_obe_c),"MPa"],
+    ["P3-SSE-C (center, SSE)",fmt(dl.p3_sse_c),"MPa"]
+  ]);
+  $("lineKv").innerHTML=kv([
+    {note:"Vertical line load along the inner shell base (N/mm)."},
+    ["w_s (shell weight component)",fmt(ll.ws,3),"N/mm"],
+    ["w_p (perlite friction component)",fmt(ll.wp,3),"N/mm"],
+    ["WL-OPE (Operating)",fmt(ll.wl_ope,3),"N/mm"],
+    ["WL-TEST (Testing)",fmt(ll.wl_test,3),"N/mm"],
+    ["WL-OBE",fmt(ll.wl_obe,3),"N/mm"],
+    ["WL-SSE",fmt(ll.wl_sse,3),"N/mm"]
+  ]);
+
+  $("concBody").innerHTML=CASES.map(function(c){
+    var r=rc[c[0]];
+    return '<tr><td class="lcol">'+c[1]+'</td><td>'+fmt(r.design_force,2)+'</td><td>'+fmt(r.resistance,2)+'</td><td>'+chip(r.status)+'</td></tr>';
+  }).join("");
+
+  function insRows(part){
+    return CASES.map(function(c){
+      var r=part[c[0]];
+      return '<tr><td class="lcol">'+c[1]+'</td><td>'+fmt(r.calc_stress)+'</td><td>'+fmt(r.allow_stress)+'</td><td>'+r.safety_factor+'</td><td>'+chip(r.status)+'</td></tr>';
+    }).join("");
+  }
+  $("centerBody").innerHTML=insRows(ins.centerPart);
+  $("ringBody").innerHTML=insRows(ins.ringPart);
+
+  var bClass=sm.overall?'ok':'bad';
+  var bText=sm.overall?'\u2713 ALL VERIFICATIONS PASSED':'\u2717 DESIGN VERIFICATION FAILED';
+  $("summaryBanner").innerHTML='<div class="banner '+bClass+'">'+bText+'</div>';
+  function st(v){return v==='PASSED'?'<span class="check ok">PASSED</span>':'<span class="check bad">FAILED</span>';}
+  $("summaryKv").innerHTML=kv([
+    ["Ring concrete bearing",st(sm.ringConcreteStatus),""],
+    ["Bottom insulation \u2013 center part",st(sm.centerPartStatus),""],
+    ["Bottom insulation \u2013 ring part",st(sm.ringPartStatus),""],
+    {note:"Governing operating stresses:"},
+    ["Max operating stress \u2013 center",fmt(sm.maxOpCenter),"MPa"],
+    ["Max operating stress \u2013 ring",fmt(sm.maxOpRing),"MPa"]
+  ]);
+
+  buildPrintReport(sp,dp,dl,ll,rc,ins,sm);
+}
+
+/* ---------- FORMULAE TAB ---------- */
+var FORMULAS={
+  "Static Liquid Pressure":[["P1-OPE","\u03c1E \u00b7 g \u00b7 hM \u00b7 10\u207b\u2076"],["P1-TEST","\u03c1W \u00b7 g \u00b7 ht \u00b7 10\u207b\u2076"],["P1-SEIS","\u03c1E \u00b7 g \u00b7 hs \u00b7 10\u207b\u2076"]],
+  "Dynamic Liquid Pressure":[["Pv-OBE","\u221a(Pv-OBE-Comp1\u00b2 + Pv-OBE-Comp2\u00b2)"],["Pv-SSE","\u221a(Pv-SSE-Comp1\u00b2 + Pv-SSE-Comp2\u00b2)"],["P2-OBE","Ph-OBE + Pv-OBE + Ps-OBE"],["P2-SSE","Ph-SSE + Pv-SSE + Ps-SSE"]],
+  "Dead Load":[["wA","thickness \u00d7 density \u00d7 g \u00d7 10\u207b\u2076"],["P3-OPE-R","wA + wR + wTA + wL"],["P3-OBE-R","(1 + \u03b1vr-OBE \u00d7 0.3) \u00d7 P3-OPE-R"],["P3-SSE-R","(1 + \u03b1vr-SSE \u00d7 0.3) \u00d7 P3-OPE-R"]],
+  "Line Load":[["ws","shell_weight \u00d7 g / (2\u03c0R) / 1000"],["wp","(\u03c1 \u00d7 9.80665 \u00d7 t/2) \u00d7 [H \u2212 (t/(2\u03bckH)) \u00d7 (1\u2212e^(\u22122\u03bckH/t))] / 1000"],["WL-OBE","ws + wp + 0.3 \u00d7 \u03b1vf-OBE \u00d7 (ws+wp) + 4M-OBE/(\u03c0R\u00b2 \u00d7 4 \u00d7 10\u2076)"]],
+  "Ring Concrete":[["b1","shell_thk + 2 \u00d7 weld_len + 2 \u00d7 annular_thk"],["b2","3 \u00d7 b1"],["fcd","\u03b1cc \u00d7 fck / \u03b3c"],["FRdu","Ac0 \u00d7 fcd \u00d7 \u221a(Ac1/Ac0)"]],
+  "Bottom Insulation":[["Center \u2013 Operating","P1-OPE + P3-OPE-C + Pg"],["Center \u2013 OBE","P1-SEIS + P2-OBE + P3-OBE-C + Pg"],["Ring \u2013 Operating","P1-OPE + P3-OPE-R + Pg + P5-OPE"],["Ring \u2013 SSE","P1-SEIS + P2-SSE + P3-SSE-R + Pg + P5-SSE"]]
+};
+function buildFormulas(){
+  var h="";
+  Object.keys(FORMULAS).forEach(function(sec){
+    h+='<div class="section-label">'+sec+'</div><div class="formula">';
+    h+=FORMULAS[sec].map(function(f){return '<span class="fname">'+f[0]+'</span> = '+f[1];}).join("<br>");
+    h+='</div>';
+  });
+  $("formulaBody").innerHTML=h;
+}
+
+/* ---------- PRINT REPORT (PDF) ---------- */
+var INCLUDE_FORMULAE=false;
+function tbl(head,rows){
+  var h='<table><thead><tr>'+head.map(function(x){return '<th>'+x+'</th>';}).join("")+'</tr></thead><tbody>';
+  h+=rows.map(function(r){return '<tr>'+r.map(function(c){return '<td>'+c+'</td>';}).join("")+'</tr>';}).join("");
+  return h+'</tbody></table>';
+}
+function statusCell(s){return '<span class="'+(s==='OK'?'ok':'ng')+'">'+s+'</span>';}
+function fbox(html){ return INCLUDE_FORMULAE ? '<div class="fbox">'+html+'</div>' : ''; }
+
+/* Detailed worked-calculation block: heading formula then substituted values.
+   Only rendered when INCLUDE_FORMULAE is true. `lines` is an array of
+   ['label', 'symbolic = substituted = result unit'] rows. */
+function calcBox(title, generic, lines){
+  if(!INCLUDE_FORMULAE) return '';
+  var h='<div class="fbox"><div class="fb-title">'+title+'</div>';
+  h+='<div class="fb-generic">'+generic+'</div>';
+  if(lines && lines.length){
+    h+='<table class="fb-tbl"><tbody>';
+    h+=lines.map(function(l){
+      return '<tr><td class="fb-lbl">'+l[0]+'</td><td class="fb-eq">'+l[1]+'</td></tr>';
+    }).join('');
+    h+='</tbody></table>';
+  }
+  return h+'</div>';
+}
+function n(x,d){ d=(d===undefined)?4:d; return (x===undefined||x===null||isNaN(x))?'\u2013':Number(x).toFixed(d); }
+
+function buildPrintReport(sp,dp,dl,ll,rc,ins,sm){
+  var d=new Date();
+  var g=S.gravity;
+  var h='';
+  h+='<div class="rpt-head"><h1>Bottom Insulation Calculation Report</h1>'+
+     '<div class="meta">LNG Tank Design Verification &nbsp;|&nbsp; Generated '+d.toLocaleString()+
+     (INCLUDE_FORMULAE?' &nbsp;|&nbsp; Detailed (with formulae)':'')+'</div></div>';
+  h+='<div class="rpt-overall '+(sm.overall?'ok':'bad')+'">'+(sm.overall?'ALL VERIFICATIONS PASSED':'DESIGN VERIFICATION FAILED')+'</div>';
+
+  h+='<h3>1. Verification Summary</h3>'+tbl(['Verification','Status'],[
+    ['Ring Concrete Bearing',statusCell(sm.ringConcreteStatus==='PASSED'?'OK':'NG')],
+    ['Bottom Insulation \u2013 Center Part',statusCell(sm.centerPartStatus==='PASSED'?'OK':'NG')],
+    ['Bottom Insulation \u2013 Ring Part',statusCell(sm.ringPartStatus==='PASSED'?'OK':'NG')]
+  ]);
+
+  h+='<h3>2. Key Design Inputs</h3>'+tbl(['Parameter','Value','Unit'],[
+    ['LNG density (\u03c1E)',S.lng_density,'kg/m\u00b3'],['Seawater density (\u03c1W)',S.seawater_density,'kg/m\u00b3'],
+    ['Gravity (g)',S.gravity,'m/s\u00b2'],
+    ['Max design liquid level (hM)',S.max_liquid_level,'m'],['High liquid level (hs)',S.high_liquid_level,'m'],
+    ['Hydrostatic test level (ht)',S.test_level,'m'],['Gas pressure (Pg)',S.gas_pressure,'MPa'],
+    ['Tank radius (R)',S.tank_radius,'m'],['Inner shell self-weight (W)',S.shell_weight,'kg'],
+    ['Cellular glass nominal \u2013 center',S.cellular_center_nominal,'MPa'],
+    ['Cellular glass nominal \u2013 ring',S.cellular_ring_nominal,'MPa']
+  ]);
+
+  /* ---- 3. Static liquid pressure ---- */
+  h+='<h3>3. Static Liquid Pressure</h3>'+tbl(['Quantity','Value','Unit'],[
+    ['P1-OPE (operating)',fmt(sp.p1_ope),'MPa'],['P1-TEST (testing)',fmt(sp.p1_test),'MPa'],['P1-SEIS (OBE & SSE)',fmt(sp.p1_seis),'MPa']
+  ])+calcBox('Static liquid pressure','P1 = \u03c1 \u00b7 g \u00b7 h \u00b7 10\u207b\u2076 &nbsp;(density \u00d7 gravity \u00d7 liquid level \u2192 MPa)',[
+    ['P1-OPE','('+S.lng_density+' \u00d7 '+g+' \u00d7 '+S.max_liquid_level+') \u00d7 10\u207b\u2076 = <b>'+n(sp.p1_ope)+'</b> MPa'],
+    ['P1-TEST','('+S.seawater_density+' \u00d7 '+g+' \u00d7 '+S.test_level+') \u00d7 10\u207b\u2076 = <b>'+n(sp.p1_test)+'</b> MPa'],
+    ['P1-SEIS','('+S.lng_density+' \u00d7 '+g+' \u00d7 '+S.high_liquid_level+') \u00d7 10\u207b\u2076 = <b>'+n(sp.p1_seis)+'</b> MPa']
+  ]);
+
+  /* ---- 4. Dynamic seismic pressure ---- */
+  h+='<h3>4. Dynamic (Seismic) Pressure</h3>'+tbl(['Quantity','Value','Unit'],[
+    ['Pv-OBE',fmt(dp.pv_obe),'MPa'],['P2-OBE',fmt(dp.p2_obe),'MPa'],['Pv-SSE',fmt(dp.pv_sse),'MPa'],['P2-SSE',fmt(dp.p2_sse),'MPa']
+  ])+calcBox('Dynamic seismic pressure','Pv = \u221a(Pv,c1\u00b2 + Pv,c2\u00b2) &nbsp;&bull;&nbsp; P2 = Ph + Pv + Ps',[
+    ['Pv-OBE','\u221a('+S.pv_obe_comp1+'\u00b2 + '+S.pv_obe_comp2+'\u00b2) = <b>'+n(dp.pv_obe)+'</b> MPa'],
+    ['P2-OBE',S.ph_obe+' + '+n(dp.pv_obe)+' + '+S.ps_obe+' = <b>'+n(dp.p2_obe)+'</b> MPa'],
+    ['Pv-SSE','\u221a('+S.pv_sse_comp1+'\u00b2 + '+S.pv_sse_comp2+'\u00b2) = <b>'+n(dp.pv_sse)+'</b> MPa'],
+    ['P2-SSE',S.ph_sse+' + '+n(dp.pv_sse)+' + '+S.ps_sse+' = <b>'+n(dp.p2_sse)+'</b> MPa']
+  ]);
+
+  /* ---- 5. Dead load ---- */
+  h+='<h3>5. Dead Load Compressive Force</h3>'+tbl(['Quantity','Value','Unit'],[
+    ['P3-OPE-R',fmt(dl.p3_ope_r),'MPa'],['P3-OPE-C',fmt(dl.p3_ope_c),'MPa'],
+    ['P3-OBE-R',fmt(dl.p3_obe_r),'MPa'],['P3-SSE-R',fmt(dl.p3_sse_r),'MPa'],
+    ['P3-OBE-C',fmt(dl.p3_obe_c),'MPa'],['P3-SSE-C',fmt(dl.p3_sse_c),'MPa']
+  ])+calcBox('Dead-load compressive pressure','w = thickness \u00d7 density \u00d7 g \u00d7 10\u207b\u2076 &nbsp;&bull;&nbsp; P3-seismic = (1 + \u03b1vr \u00d7 0.3) \u00d7 P3-OPE',[
+    ['Ring layers','wA='+n(dl.wA)+', wR='+n(dl.wR)+', wTA='+n(dl.wTA)+', wL='+n(dl.wL)+' MPa'],
+    ['P3-OPE-R',n(dl.wA)+' + '+n(dl.wR)+' + '+n(dl.wTA)+' + '+n(dl.wL)+' = <b>'+n(dl.p3_ope_r)+'</b> MPa'],
+    ['Center layers','wI='+n(dl.wI)+', wL1='+n(dl.wL1)+', wTB='+n(dl.wTB)+', wL2='+n(dl.wL2)+' MPa'],
+    ['P3-OPE-C',n(dl.wI)+' + '+n(dl.wL1)+' + '+n(dl.wTB)+' + '+n(dl.wL2)+' = <b>'+n(dl.p3_ope_c)+'</b> MPa'],
+    ['P3-OBE-R','(1 + '+S.alpha_vr_obe+' \u00d7 0.3) \u00d7 '+n(dl.p3_ope_r)+' = <b>'+n(dl.p3_obe_r)+'</b> MPa'],
+    ['P3-SSE-R','(1 + '+S.alpha_vr_sse+' \u00d7 0.3) \u00d7 '+n(dl.p3_ope_r)+' = <b>'+n(dl.p3_sse_r)+'</b> MPa'],
+    ['P3-OBE-C','(1 + '+S.alpha_vr_obe+' \u00d7 0.3) \u00d7 '+n(dl.p3_ope_c)+' = <b>'+n(dl.p3_obe_c)+'</b> MPa'],
+    ['P3-SSE-C','(1 + '+S.alpha_vr_sse+' \u00d7 0.3) \u00d7 '+n(dl.p3_ope_c)+' = <b>'+n(dl.p3_sse_c)+'</b> MPa']
+  ]);
+
+  /* ---- 6. Line load ---- */
+  h+='<h3>6. Line Load Along Inner Shell</h3>'+tbl(['Quantity','Value','Unit'],[
+    ['w_s',fmt(ll.ws,3),'N/mm'],['w_p',fmt(ll.wp,3),'N/mm'],
+    ['WL-OPE',fmt(ll.wl_ope,3),'N/mm'],['WL-TEST',fmt(ll.wl_test,3),'N/mm'],
+    ['WL-OBE',fmt(ll.wl_obe,3),'N/mm'],['WL-SSE',fmt(ll.wl_sse,3),'N/mm']
+  ])+calcBox('Vertical line load','ws = W\u00b7g/(2\u03c0R)/1000 &nbsp;&bull;&nbsp; WL-seis = ws + wp + 0.3\u00b7\u03b1vf\u00b7(ws+wp) + 4M/(\u03c0R\u00b2\u00b74\u00b710\u2076)',[
+    ['w_s','('+S.shell_weight+' \u00d7 '+g+') / (2\u03c0 \u00d7 '+S.tank_radius+') / 1000 = <b>'+n(ll.ws,3)+'</b> N/mm'],
+    ['w_p','perlite friction integral = <b>'+n(ll.wp,3)+'</b> N/mm'],
+    ['WL-OPE','ws + wp = '+n(ll.ws,3)+' + '+n(ll.wp,3)+' = <b>'+n(ll.wl_ope,3)+'</b> N/mm'],
+    ['WL-TEST','ws = <b>'+n(ll.wl_test,3)+'</b> N/mm'],
+    ['WL-OBE','ws + wp + seismic terms = <b>'+n(ll.wl_obe,3)+'</b> N/mm (M-OBE = '+S.moment_obe+' N\u00b7mm)'],
+    ['WL-SSE','ws + wp + seismic terms = <b>'+n(ll.wl_sse,3)+'</b> N/mm (M-SSE = '+S.moment_sse+' N\u00b7mm)']
+  ]);
+
+  /* ---- 7. Ring concrete bearing ---- */
+  h+='<h3>7. Ring Concrete Bearing Verification</h3>'+tbl(['Load case','1.35\u00b7WL (N/mm)','FRdu (N/mm)','Status'],
+    CASES.map(function(c){var r=rc[c[0]];return [c[1],fmt(r.design_force,2),fmt(r.resistance,2),statusCell(r.status)];})
+  )+calcBox('Ring concrete partial-area bearing','b1 = t + 2l + 2ta &nbsp;&bull;&nbsp; b2 = 3\u00b7b1 &nbsp;&bull;&nbsp; fcd = \u03b1cc\u00b7fck/\u03b3c &nbsp;&bull;&nbsp; FRdu = Ac0\u00b7fcd\u00b7\u221a(Ac1/Ac0)',[
+    ['b1','('+S.shell_thickness+' + 2\u00d7'+S.weld_length+' + 2\u00d7'+S.annular_thickness+') = <b>'+n(rc.b1,2)+'</b> mm (= Ac0)'],
+    ['b2','3 \u00d7 '+n(rc.b1,2)+' = <b>'+n(rc.b2,2)+'</b> mm (= Ac1)'],
+    ['fcd (normal)','('+S.coef_acc+' \u00d7 '+S.concrete_strength+') / '+S.safety_factor_normal+' = <b>'+n(rc.fcd_normal,3)+'</b> MPa'],
+    ['fcd (SSE)','('+S.coef_acc+' \u00d7 '+S.concrete_strength+') / '+S.safety_factor_sse+' = <b>'+n(rc.fcd_sse,3)+'</b> MPa'],
+    ['FRdu (normal)',n(rc.b1,2)+' \u00d7 '+n(rc.fcd_normal,3)+' \u00d7 \u221a('+n(rc.b2,2)+'/'+n(rc.b1,2)+') = <b>'+n(rc.frdu_normal,2)+'</b> N/mm'],
+    ['FRdu (SSE)',n(rc.b1,2)+' \u00d7 '+n(rc.fcd_sse,3)+' \u00d7 \u221a('+n(rc.b2,2)+'/'+n(rc.b1,2)+') = <b>'+n(rc.frdu_sse,2)+'</b> N/mm'],
+    ['Design force','1.35 \u00d7 WL for each load case (compared above)']
+  ]);
+
+  /* ---- 8. Center part ---- */
+  h+='<h3>8. Bottom Insulation \u2013 Center Part (Grade 800)</h3>'+tbl(['Load case','Calc. stress','Allow. stress','S.F.','Status'],
+    CASES.map(function(c){var r=ins.centerPart[c[0]];return [c[1],fmt(r.calc_stress),fmt(r.allow_stress),r.safety_factor,statusCell(r.status)];})
+  )+calcBox('Center-part stress (\u03c3 vs nominal/S.F.)','\u03c3 = P1 + P3-C + Pg &nbsp;(seismic adds P2) &nbsp;&bull;&nbsp; Allowable = '+S.cellular_center_nominal+' / S.F.',[
+    ['Operating',n(sp.p1_ope)+' + '+n(dl.p3_ope_c)+' + '+S.gas_pressure+' = <b>'+n(ins.centerPart.operating.calc_stress)+'</b> MPa &nbsp;vs '+n(ins.centerPart.operating.allow_stress)+' (S.F. 3)'],
+    ['Testing',n(sp.p1_test)+' + '+n(dl.p3_ope_c)+' = <b>'+n(ins.centerPart.testing.calc_stress)+'</b> MPa &nbsp;vs '+n(ins.centerPart.testing.allow_stress)+' (S.F. 2.25)'],
+    ['OBE',n(sp.p1_seis)+' + '+n(dp.p2_obe)+' + '+n(dl.p3_obe_c)+' + '+S.gas_pressure+' = <b>'+n(ins.centerPart.obe.calc_stress)+'</b> MPa &nbsp;vs '+n(ins.centerPart.obe.allow_stress)+' (S.F. 2)'],
+    ['SSE',n(sp.p1_seis)+' + '+n(dp.p2_sse)+' + '+n(dl.p3_sse_c)+' + '+S.gas_pressure+' = <b>'+n(ins.centerPart.sse.calc_stress)+'</b> MPa &nbsp;vs '+n(ins.centerPart.sse.allow_stress)+' (S.F. 1.5)']
+  ]);
+
+  /* ---- 9. Ring part ---- */
+  h+='<h3>9. Bottom Insulation \u2013 Ring Part (Grade 1600)</h3>'+tbl(['Load case','Calc. stress','Allow. stress','S.F.','Status'],
+    CASES.map(function(c){var r=ins.ringPart[c[0]];return [c[1],fmt(r.calc_stress),fmt(r.allow_stress),r.safety_factor,statusCell(r.status)];})
+  )+calcBox('Ring-part stress (\u03c3 vs nominal/S.F.)','\u03c3 = P1 + P3-R + Pg + P5 &nbsp;(seismic adds P2) &nbsp;&bull;&nbsp; Allowable = '+S.cellular_ring_nominal+' / S.F.',[
+    ['Operating',n(sp.p1_ope)+' + '+n(dl.p3_ope_r)+' + '+S.gas_pressure+' + '+S.p5_operating+' = <b>'+n(ins.ringPart.operating.calc_stress)+'</b> MPa &nbsp;vs '+n(ins.ringPart.operating.allow_stress)+' (S.F. 3)'],
+    ['Testing',n(sp.p1_test)+' + '+n(dl.p3_ope_r)+' + '+S.p5_testing+' = <b>'+n(ins.ringPart.testing.calc_stress)+'</b> MPa &nbsp;vs '+n(ins.ringPart.testing.allow_stress)+' (S.F. 2.25)'],
+    ['OBE',n(sp.p1_seis)+' + '+n(dp.p2_obe)+' + '+n(dl.p3_obe_r)+' + '+S.gas_pressure+' + '+S.p5_obe+' = <b>'+n(ins.ringPart.obe.calc_stress)+'</b> MPa &nbsp;vs '+n(ins.ringPart.obe.allow_stress)+' (S.F. 2)'],
+    ['SSE',n(sp.p1_seis)+' + '+n(dp.p2_sse)+' + '+n(dl.p3_sse_r)+' + '+S.gas_pressure+' + '+S.p5_sse+' = <b>'+n(ins.ringPart.sse.calc_stress)+'</b> MPa &nbsp;vs '+n(ins.ringPart.sse.allow_stress)+' (S.F. 1.5)']
+  ]);
+
+  h+='<div class="credit">Developed by: AY</div>';
+  $("printReport").innerHTML=h;
+}
+
+/* ---------- TABS ---------- */
+function setupTabs(){
+  var btns=document.querySelectorAll(".tab-btn");
+  btns.forEach(function(b){
+    b.addEventListener("click",function(){
+      btns.forEach(function(x){x.classList.remove("active");});
+      document.querySelectorAll(".tab-panel").forEach(function(p){p.classList.remove("active");});
+      b.classList.add("active");
+      $("tab-"+b.getAttribute("data-tab")).classList.add("active");
+    });
+  });
+}
+
+/* ---------- ACTIONS ---------- */
+$("printBtn").onclick=function(){ INCLUDE_FORMULAE=false; computeAndRender(); window.print(); };
+$("pdfFormulaBtn").onclick=function(){ INCLUDE_FORMULAE=true; computeAndRender(); window.print(); INCLUDE_FORMULAE=false; computeAndRender(); };
+$("resetBtn").onclick=function(){ S=JSON.parse(JSON.stringify(DEFAULTS)); buildInputs(); computeAndRender(); };
+
+/* ---------- WORD EXPORT (.doc, opens in MS Word) ---------- */
+function exportWord(){
+  /* build the detailed report (with worked formulae) into #printReport */
+  var prev=INCLUDE_FORMULAE;
+  INCLUDE_FORMULAE=true; computeAndRender();
+  var reportHTML=$("printReport").innerHTML;
+  INCLUDE_FORMULAE=prev; computeAndRender();
+
+  var wordStyle=''+
+    'body{font-family:"Calibri","Segoe UI",Arial,sans-serif;color:#111;font-size:11pt;}'+
+    '.rpt-head{text-align:center;border-bottom:2px solid #1f4e79;padding-bottom:8px;margin-bottom:12px;}'+
+    '.rpt-head h1{margin:0;font-size:18pt;color:#1f4e79;}'+
+    '.rpt-head .meta{font-size:9pt;color:#444;margin-top:4px;}'+
+    '.rpt-overall{text-align:center;font-weight:bold;font-size:13pt;padding:8px;border:2px solid;margin:10px 0;}'+
+    '.rpt-overall.ok{color:#2f6f4f;border-color:#2f6f4f;background:#eaf3ee;}'+
+    '.rpt-overall.bad{color:#9c2b2b;border-color:#9c2b2b;background:#f6e9e9;}'+
+    'h3{font-size:11.5pt;color:#ffffff;background:#1f4e79;padding:5px 9px;margin:16px 0 4px;}'+
+    'table{width:100%;border-collapse:collapse;font-size:9.5pt;margin-top:0;}'+
+    'th,td{border:1px solid #999;padding:4px 7px;text-align:right;}'+
+    'th{background:#e8eef5;color:#1f4e79;}'+
+    'th:first-child,td:first-child{text-align:left;}'+
+    '.ok{color:#2f6f4f;font-weight:bold;} .ng{color:#9c2b2b;font-weight:bold;}'+
+    '.fbox{border:1px solid #bbb;border-left:3px solid #1f4e79;background:#f5f6f8;padding:6px 9px;font-size:9pt;margin-top:6px;}'+
+    '.fbox b{color:#1f4e79;}'+
+    '.fbox .fb-title{font-weight:bold;color:#1f4e79;font-size:9.5pt;margin-bottom:3px;}'+
+    '.fbox .fb-generic{font-style:italic;color:#444;margin-bottom:5px;}'+
+    '.fbox .fb-tbl{width:100%;border-collapse:collapse;}'+
+    '.fbox .fb-tbl td{border:none;padding:2px 6px 2px 0;text-align:left;vertical-align:top;}'+
+    '.fbox .fb-tbl .fb-lbl{font-weight:bold;color:#1f4e79;white-space:nowrap;}'+
+    '.credit{text-align:center;margin-top:18px;padding-top:8px;border-top:1px solid #999;font-size:8.5pt;'+
+    'letter-spacing:.15em;text-transform:uppercase;color:#333;font-weight:bold;}';
+
+  var doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" '+
+    'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'+
+    '<head><meta charset="utf-8"><title>Bottom Insulation Calculation Report</title>'+
+    '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View>'+
+    '<w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->'+
+    '<style>@page{size:A4;margin:1.4cm 1.2cm;} '+wordStyle+'</style></head>'+
+    '<body>'+reportHTML+'</body></html>';
+
+  var blob=new Blob(['\ufeff'+doc],{type:'application/msword'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var ts=new Date(); var stamp=ts.getFullYear()+('0'+(ts.getMonth()+1)).slice(-2)+('0'+ts.getDate()).slice(-2);
+  a.href=url; a.download='Bottom_Insulation_Report_'+stamp+'.doc';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},150);
+}
+$("wordBtn").onclick=exportWord;
+
+/* ---------- INIT ---------- */
+buildInputs();
+buildFormulas();
+setupTabs();
+computeAndRender();
+
+/* lock the developer credit */
+(function(){
+  var TXT="Developed by: AY", ID="devCredit";
+  function restore(){var n=$(ID); if(!n){n=document.createElement("div");n.id=ID;document.querySelector(".wrap").appendChild(n);} if(n.textContent!==TXT)n.textContent=TXT;}
+  var obs=new MutationObserver(restore);
+  obs.observe(document.body,{childList:true,subtree:true,characterData:true});
+  restore();
+})();
+</script>
 </body>
 </html>
